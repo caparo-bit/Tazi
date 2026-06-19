@@ -251,6 +251,527 @@
     @media (prefers-reduced-motion: reduce) {
       body::before, .spinner { animation: none; }
     }
+
+    /* ── DEBUG CONSOLE ── */
+    #debug-panel {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #0a0a0f;
+      border-top: 1px solid #2a2a45;
+      font-family: 'Courier New', monospace;
+      font-size: .75rem;
+      z-index: 999;
+    }
+    #debug-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .4rem .75rem;
+      background: #111128;
+      cursor: pointer;
+      user-select: none;
+    }
+    #debug-header span { color: #3ecf8e; font-weight: 600; }
+    #debug-toggle { color: #6b7280; font-size: .7rem; }
+    #debug-body {
+      max-height: 200px;
+      overflow-y: auto;
+      padding: .5rem .75rem;
+    }
+    .log-line { padding: .15rem 0; border-bottom: 1px solid #1a1a2e; line-height: 1.4; }
+    .log-info  { color: #93c5fd; }
+    .log-ok    { color: #3ecf8e; }
+    .log-warn  { color: #fbbf24; }
+    .log-error { color: #f87171; }
+    .log-time  { color: #4b5563; margin-right: .5rem; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+
+  <!-- ── MARCA ── -->
+  <div class="brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M13.5 3L4.5 14h8.25L10.5 21l9-11h-8.25L13.5 3Z"
+              fill="#3ecf8e"/>
+      </svg>
+    </div>
+    <span class="brand-name">Mi App</span>
+  </div>
+
+  <!-- Mensaje global -->
+  <div id="msg" class="message"></div>
+
+  <!-- ══════════════════════════════════
+       VISTA: LOGIN
+  ══════════════════════════════════ -->
+  <div id="view-login" class="view active">
+    <h1>Bienvenido</h1>
+    <p class="subtitle">Inicia sesión para continuar</p>
+
+    <div class="field">
+      <label for="login-email">Correo</label>
+      <input id="login-email" type="email" placeholder="tu@correo.com" autocomplete="email" />
+    </div>
+
+    <div class="field">
+      <label for="login-pass">Contraseña</label>
+      <input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+
+    <button id="btn-login" class="btn" onclick="handleLogin()">Iniciar sesión</button>
+
+    <div class="divider">o</div>
+
+    <button class="btn btn-ghost" onclick="handleMagicLink()">
+      Enviar enlace mágico
+    </button>
+
+    <p class="footer-link">
+      ¿No tienes cuenta? <a href="#" onclick="switchView('register')">Regístrate</a>
+    </p>
+  </div>
+
+  <!-- ══════════════════════════════════
+       VISTA: REGISTRO
+  ══════════════════════════════════ -->
+  <div id="view-register" class="view">
+    <h1>Crear cuenta</h1>
+    <p class="subtitle">Empieza gratis, sin tarjeta</p>
+
+    <div class="field">
+      <label for="reg-email">Correo</label>
+      <input id="reg-email" type="email" placeholder="tu@correo.com" autocomplete="email" />
+    </div>
+
+    <div class="field">
+      <label for="reg-pass">Contraseña</label>
+      <input id="reg-pass" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+    </div>
+
+    <button id="btn-register" class="btn" onclick="handleRegister()">Crear cuenta</button>
+
+    <p class="footer-link">
+      ¿Ya tienes cuenta? <a href="#" onclick="switchView('login')">Inicia sesión</a>
+    </p>
+  </div>
+
+  <!-- ══════════════════════════════════
+       VISTA: USUARIO LOGUEADO
+  ══════════════════════════════════ -->
+  <div id="view-user" class="view">
+    <div class="user-panel">
+      <div class="user-avatar" id="user-initial">?</div>
+      <h1 style="font-size:1.1rem">Sesión activa</h1>
+      <p class="user-email" id="user-email-display">—</p>
+      <button class="btn" style="margin-top:1.75rem" onclick="handleLogout()">Cerrar sesión</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════
+     SUPABASE SDK (CDN)
+══════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+  /* ── DEBUG ── */
+  let debugOpen = true;
+  function toggleDebug() {
+    debugOpen = !debugOpen;
+    document.getElementById('debug-body').style.display = debugOpen ? 'block' : 'none';
+    document.getElementById('debug-toggle').textContent = debugOpen ? '▲ ocultar' : '▼ mostrar';
+  }
+
+  function dbg(msg, type='info') {
+    const body = document.getElementById('debug-body');
+    const now = new Date().toLocaleTimeString('es', {hour12:false});
+    const line = document.createElement('div');
+    line.className = 'log-line log-' + type;
+    line.innerHTML = '<span class="log-time">' + now + '</span>' + msg;
+    body.appendChild(line);
+    body.scrollTop = body.scrollHeight;
+    console.log('[DEBUG]', msg);
+  }
+
+  // Interceptar errores globales
+  window.onerror = (msg, src, line) => dbg('ERROR JS: ' + msg + ' (linea ' + line + ')', 'error');
+  window.onunhandledrejection = (e) => dbg('Promise rechazada: ' + e.reason, 'error');
+
+</script>
+
+<script>
+  /* ─────────────────────────────────
+     🔧 CONFIGURACIÓN — edita estos valores
+     Encuéntralos en: Supabase Dashboard → Settings → API
+  ───────────────────────────────── */
+  const SUPABASE_URL  = 'https://ejbvfirfodfktekgpwkm.supabase.co';
+  const SUPABASE_ANON = 'sb_publishable_ZNwpPu1uqxZfKWOU6FDgbQ_0sLhGrXt';
+
+  /* ─────────────────────────────────
+     INICIALIZACIÓN
+  ───────────────────────────────── */
+  dbg('SDK Supabase cargado ✓', 'ok');
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+  dbg('Cliente Supabase creado → ' + SUPABASE_URL, 'ok');
+
+  /* ─────────────────────────────────
+     HELPERS UI
+  ───────────────────────────────── */
+  function showMsg(text, type = 'error') {
+    const el = document.getElementById('msg');
+    el.textContent = text;
+    el.className = `message ${type} show`;
+  }
+
+  function clearMsg() {
+    const el = document.getElementById('msg');
+    el.className = 'message';
+    el.textContent = '';
+  }
+
+  function setLoading(btnId, loading) {
+    const btn = document.getElementById(btnId);
+    btn.disabled = loading;
+    btn.innerHTML = loading
+      ? `<span class="spinner"></span> Cargando…`
+      : btn.dataset.label || btn.textContent;
+    if (!loading && !btn.dataset.label) btn.dataset.label = btn.textContent;
+  }
+
+  function switchView(name) {
+    clearMsg();
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(`view-${name}`).classList.add('active');
+  }
+
+  /* ─────────────────────────────────
+     AUTH: detectar sesión activa
+  ───────────────────────────────── */
+  (async () => {
+    dbg('Verificando sesión…', 'info');
+    try {
+      const { data: { session }, error } = await sb.auth.getSession();
+      if (error) { dbg('Error getSession: ' + error.message, 'error'); }
+      else if (session?.user) { dbg('Sesión activa: ' + session.user.email, 'ok'); showUserView(session.user); }
+      else { dbg('Sin sesión activa', 'warn'); }
+    } catch(e) { dbg('Excepción getSession: ' + e.message, 'error'); }
+  })();
+
+  sb.auth.onAuthStateChange((_event, session) => {
+    if (session?.user) showUserView(session.user);
+    else switchView('login');
+  });
+
+  function showUserView(user) {
+    document.getElementById('user-email-display').textContent = user.email;
+    document.getElementById('user-initial').textContent =
+      (user.email?.[0] ?? '?').toUpperCase();
+    switchView('user');
+  }
+
+  /* ─────────────────────────────────
+     AUTH: Login con email + password
+  ───────────────────────────────── */
+  async function handleLogin() {
+    clearMsg();
+    const email = document.getElementById('login-email').value.trim();
+    const pass  = document.getElementById('login-pass').value;
+
+    if (!email || !pass) { showMsg('Completa todos los campos.'); return; }
+
+    setLoading('btn-login', true);
+
+    dbg('Intentando login con: ' + email, 'info');
+    const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) dbg('Login error: ' + error.message, 'error');
+    else dbg('Login exitoso', 'ok');
+
+    setLoading('btn-login', false);
+
+    if (error) showMsg(error.message);
+  }
+
+  /* ─────────────────────────────────
+     AUTH: Registro
+  ───────────────────────────────── */
+  async function handleRegister() {
+    clearMsg();
+    const email = document.getElementById('reg-email').value.trim();
+    const pass  = document.getElementById('reg-pass').value;
+
+    if (!email || !pass) { showMsg('Completa todos los campos.'); return; }
+    if (pass.length < 6) { showMsg('La contraseña debe tener al menos 6 caracteres.'); return; }
+
+    setLoading('btn-register', true);
+
+    const { error } = await sb.auth.signUp({ email, password: pass });
+
+    setLoading('btn-register', false);
+
+    if (error) {
+      showMsg(error.message);
+    } else {
+      showMsg('¡Cuenta creada! Revisa tu correo para confirmarla.', 'success');
+    }
+  }
+
+  /* ─────────────────────────────────
+     AUTH: Magic Link
+  ───────────────────────────────── */
+  async function handleMagicLink() {
+    clearMsg();
+    const email = document.getElementById('login-email').value.trim();
+    if (!email) { showMsg('Escribe tu correo primero.'); return; }
+
+    const { error } = await sb.auth.signInWithOtp({ email });
+
+    if (error) {
+      showMsg(error.message);
+    } else {
+      showMsg('Enlace enviado — revisa tu bandeja de entrada.', 'success');
+    }
+  }
+
+  /* ─────────────────────────────────
+     AUTH: Logout
+  ───────────────────────────────── */
+  async function handleLogout() {
+    await sb.auth.signOut();
+  }
+</script>
+
+
+<!-- DEBUG CONSOLE -->
+<div id="debug-panel">
+  <div id="debug-header" onclick="toggleDebug()">
+    <span>🛠 Consola de debug</span>
+    <span id="debug-toggle">▲ ocultar</span>
+  </div>
+  <div id="debug-body"></div>
+</div>
+</body>
+</html>
+
+      position: fixed;
+      top: -160px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 560px;
+      height: 560px;
+      background: radial-gradient(circle, rgba(62,207,142,.18) 0%, transparent 70%);
+      pointer-events: none;
+      animation: pulse 4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: .7; transform: translateX(-50%) scale(1); }
+      50%       { opacity: 1;  transform: translateX(-50%) scale(1.08); }
+    }
+
+    .card {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 2.5rem 2.25rem;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 0 0 1px rgba(62,207,142,.06),
+                  0 24px 60px rgba(0,0,0,.5);
+    }
+
+    /* Logo / marca */
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: 2rem;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--green-dim);
+      border: 1px solid rgba(62,207,142,.25);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-icon svg { width: 18px; height: 18px; }
+
+    .brand-name {
+      font-size: .95rem;
+      font-weight: 600;
+      letter-spacing: -.01em;
+      color: var(--text);
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      letter-spacing: -.02em;
+      margin-bottom: .4rem;
+    }
+
+    .subtitle {
+      font-size: .85rem;
+      color: var(--muted);
+      margin-bottom: 2rem;
+    }
+
+    label {
+      display: block;
+      font-size: .8rem;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: .4rem;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+    }
+
+    .field { margin-bottom: 1.1rem; }
+
+    input[type="email"],
+    input[type="password"],
+    input[type="text"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: .9rem;
+      padding: .65rem .85rem;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    input:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(62,207,142,.15);
+    }
+
+    input::placeholder { color: #3d3d5c; }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: .72rem;
+      margin-top: 1.5rem;
+      background: var(--green);
+      color: #0f1117;
+      font-family: inherit;
+      font-size: .9rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      letter-spacing: -.01em;
+      transition: opacity .2s, transform .1s;
+    }
+
+    .btn:hover  { opacity: .88; }
+    .btn:active { transform: scale(.98); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+      margin-top: .75rem;
+    }
+
+    .btn-ghost:hover { border-color: var(--green); color: var(--green); opacity: 1; }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      color: var(--muted);
+      font-size: .78rem;
+      margin: 1.25rem 0;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .footer-link {
+      text-align: center;
+      font-size: .82rem;
+      color: var(--muted);
+      margin-top: 1.5rem;
+    }
+
+    .footer-link a {
+      color: var(--green);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .footer-link a:hover { text-decoration: underline; }
+
+    .message {
+      font-size: .82rem;
+      padding: .65rem .85rem;
+      border-radius: 7px;
+      margin-bottom: 1rem;
+      display: none;
+    }
+
+    .message.error   { background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.25); color: var(--error); }
+    .message.success { background: var(--green-dim);      border: 1px solid rgba(62,207,142,.25);  color: var(--green); }
+    .message.show    { display: block; }
+
+    /* Spinner en botón */
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(15,17,23,.3);
+      border-top-color: #0f1117;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Vista activa */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* Panel usuario logueado */
+    .user-panel { text-align: center; padding: .5rem 0; }
+    .user-avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--green-dim);
+      border: 2px solid rgba(62,207,142,.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--green);
+      margin: 0 auto 1rem;
+    }
+
+    .user-email { color: var(--muted); font-size: .85rem; margin-top: .25rem; }
+
+    @media (prefers-reduced-motion: reduce) {
+      body::before, .spinner { animation: none; }
+    }
   </style>
 </head>
 <body>
