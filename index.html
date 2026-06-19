@@ -1,128 +1,250 @@
-```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Tazi · Taxi Madrid</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <style>
-        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #0f1117; color: white; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
-        #topbar { height: 52px; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; background: #12141d; border-bottom: 1px solid #2a2a45; flex-shrink: 0; }
-        #map { flex-grow: 1; min-height: 200px; }
-        #panel { height: 45%; background: #161926; border-radius: 20px 20px 0 0; padding: 16px; overflow-y: auto; flex-shrink: 0; box-shadow: 0 -4px 10px rgba(0,0,0,0.3); }
-        input { width: 100%; padding: 14px; border-radius: 12px; border: none; background: #202433; color: white; margin-bottom: 10px; box-sizing: border-box; }
-        button { width: 100%; padding: 14px; border: none; border-radius: 12px; background: #3ecf8e; color: #000; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
-        button:active { opacity: 0.8; }
-        .card { margin-top: 10px; padding: 12px; background: #1a1a2e; border-radius: 10px; font-size: 0.95rem; }
-        .small { color: #9ca3af; font-size: 0.8rem; margin-top: 4px; }
-        #sug { background: #202433; border-radius: 10px; max-height: 150px; overflow-y: auto; margin-bottom: 10px; display: none; }
-        .sug-item { padding: 12px; border-bottom: 1px solid #2a2a45; cursor: pointer; font-size: 0.9rem; }
-        .sug-item:hover { background: #2a2a45; }
-        #status-msg { padding: 10px; color: #ff6b6b; font-size: 0.8rem; text-align: center; display: none; }
-    </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Taxi Madrid · Red</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:system-ui;
+  background:#0f1117;
+  color:white;
+  overflow:hidden;
+}
+
+#topbar{
+  height:52px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:0 12px;
+  background:#12141d;
+  border-bottom:1px solid #2a2a45;
+}
+
+#map{height:60vh;}
+
+#panel{
+  height:40vh;
+  background:#161926;
+  padding:12px;
+}
+
+input,select{
+  width:100%;
+  padding:10px;
+  margin:6px 0;
+  border:none;
+  border-radius:8px;
+  background:#0f1117;
+  color:white;
+}
+
+button{
+  width:100%;
+  padding:10px;
+  border:none;
+  border-radius:8px;
+  background:#3ecf8e;
+  font-weight:bold;
+}
+
+.badge{
+  display:inline-block;
+  padding:4px 8px;
+  border-radius:6px;
+  font-size:.75rem;
+  margin-bottom:6px;
+}
+
+.driver{ background:#3ecf8e;color:black; }
+.client{ background:#3b82f6;color:white; }
+
+.user-item{
+  background:#1a1a2e;
+  padding:6px;
+  margin-top:5px;
+  border-radius:8px;
+  font-size:.85rem;
+}
+</style>
 </head>
+
 <body>
 
 <div id="topbar">
-    <strong style="font-size: 1.2rem;">🚕 Tazi</strong>
-    <button onclick="toggleFS()" style="width: auto; background: none; color: #9ca3af;">⛶</button>
+  <strong>🚕 Red Taxi Madrid</strong>
+  <button onclick="logout()">Salir</button>
 </div>
 
 <div id="map"></div>
 
 <div id="panel">
-    <input id="dest" placeholder="¿A dónde vamos hoy?" oninput="searchSug(this.value)" autocomplete="off"/>
-    <div id="sug"></div>
-    <div id="status-msg"></div>
-    <button id="calc-btn" onclick="calcRoute()">Calcular trayecto</button>
 
-    <div class="card" style="display: flex; justify-content: space-between;">
-        <span>📏 Distancia: <b id="dist">--</b></span>
-        <span>⏱ Tiempo: <b id="time">--</b></span>
-    </div>
-    <div class="card">
-        <div>🚕 Precio estimado: <b id="price" style="color: #3ecf8e; font-size: 1.2rem;">--</b></div>
-        <div class="small">Tarifa oficial Madrid + Estimación tráfico</div>
-    </div>
+  <div id="roleBox"></div>
+
+  <select id="roleSelect">
+    <option value="client">Cliente</option>
+    <option value="driver">Conductor</option>
+  </select>
+
+  <button onclick="setRole()">Entrar con rol</button>
+
+  <input id="dest" placeholder="Destino (solo cliente)"/>
+
+  <button onclick="createTrip()">Solicitar viaje</button>
+
+  <h4>Usuarios en vivo</h4>
+  <div id="users"></div>
+
 </div>
 
 <script>
-    const map = L.map("map").setView([40.4168, -3.7038], 13);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '© OpenStreetMap'
-    }).addTo(map);
 
-    let userMarker, routeLine, selected;
+/* ========= SUPABASE ========= */
+const sb = supabase.createClient(
+  "https://ejbvfirfodfktekgpwkm.supabase.co",
+  "TU_ANON_KEY"
+);
 
-    // Geolocalización
-    navigator.geolocation.watchPosition(pos => {
-        const p = [pos.coords.latitude, pos.coords.longitude];
-        if (!userMarker) {
-            userMarker = L.marker(p).addTo(map).bindPopup("Tu ubicación");
-            map.setView(p, 14);
-        } else {
-            userMarker.setLatLng(p);
-        }
-    }, err => showStatus("No pudimos acceder a tu GPS."), { enableHighAccuracy: true });
+let user, role;
 
-    function showStatus(msg) {
-        const s = document.getElementById("status-msg");
-        s.innerText = msg;
-        s.style.display = msg ? "block" : "none";
-    }
+/* ========= LOGIN ANON ========= */
+async function init(){
 
-    async function searchSug(q) {
-        if (q.length < 3) return (document.getElementById("sug").style.display = "none");
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q},Madrid`);
-        const data = await res.json();
-        const sug = document.getElementById("sug");
-        sug.innerHTML = data.slice(0, 4).map(x => `<div class="sug-item" onclick="setDest('${x.display_name.replace(/'/g, "")}', ${x.lat}, ${x.lon})">${x.display_name}</div>`).join("");
-        sug.style.display = data.length ? "block" : "none";
-    }
+  const {data} = await sb.auth.signInAnonymously();
+  user = data.user;
 
-    function setDest(name, lat, lon) {
-        document.getElementById("dest").value = name;
-        document.getElementById("sug").style.display = "none";
-        selected = { lat, lon };
-    }
+  listenUsers();
+}
 
-    async function calcRoute() {
-        if (!userMarker || !selected) return showStatus("Por favor, selecciona un destino válido.");
-        showStatus("");
-        const userPos = userMarker.getLatLng();
-        const url = `https://router.project-osrm.org/route/v1/driving/${userPos.lng},${userPos.lat};${selected.lon},${selected.lat}?overview=full&geometries=geojson`;
-        
-        try {
-            const res = await fetch(url);
-            const data = await res.json();
-            const route = data.routes[0];
-            const km = route.distance / 1000;
-            const min = route.duration / 60;
-            
-            document.getElementById("dist").innerText = km.toFixed(1) + " km";
-            document.getElementById("time").innerText = Math.round(min) + " min";
-            
-            let price = 2.55 + (km * 1.35) + (min * 0.30);
-            const h = new Date().getHours();
-            if ((h >= 7 && h <= 10) || (h >= 17 && h <= 20)) price += (km * 0.20);
-            document.getElementById("price").innerText = price.toFixed(2) + " €";
+init();
 
-            if (routeLine) map.removeLayer(routeLine);
-            routeLine = L.geoJSON(route.geometry, { style: { color: "#3ecf8e", weight: 6 } }).addTo(map);
-            map.fitBounds(routeLine.getBounds(), { padding: [20, 20] });
-        } catch(e) {
-            showStatus("Error al calcular la ruta.");
-        }
-    }
+/* ========= ROLE ========= */
+async function setRole(){
 
-    function toggleFS() {
-        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-        else document.exitFullscreen();
-    }
+  role = roleSelect.value;
+
+  await sb.from("profiles").upsert({
+    id:user.id,
+    role
+  });
+
+  roleBox.innerHTML =
+    `<span class="badge ${role}">
+      Rol: ${role}
+    </span>`;
+}
+
+/* ========= MAPA ========= */
+const map = L.map("map").setView([40.4168,-3.7038],13);
+
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
+.addTo(map);
+
+let markers = {};
+
+/* ========= GPS ========= */
+navigator.geolocation.watchPosition(async pos=>{
+
+  const lat = pos.coords.latitude;
+  const lng = pos.coords.longitude;
+
+  await sb.from("locations").upsert({
+    user_id:user.id,
+    role,
+    lat,
+    lng,
+    updated_at:new Date()
+  });
+
+});
+
+/* ========= ESCUCHAR USUARIOS ========= */
+function listenUsers(){
+
+  sb.channel("live")
+  .on("postgres_changes",
+    {event:"*",schema:"public",table:"locations"},
+    payload=>renderUsers(payload.new)
+  )
+  .subscribe();
+
+  loadAll();
+}
+
+async function loadAll(){
+
+  const {data} = await sb.from("locations").select("*");
+
+  data.forEach(renderUsers);
+}
+
+/* ========= DIBUJAR EN MAPA ========= */
+function renderUsers(u){
+
+  if(!u || !u.lat) return;
+
+  const icon =
+    u.role === "driver"
+    ? "🚖"
+    : "📍";
+
+  const latlng = [u.lat,u.lng];
+
+  if(markers[u.user_id]){
+    markers[u.user_id].setLatLng(latlng);
+  }else{
+    markers[u.user_id] = L.marker(latlng)
+      .addTo(map)
+      .bindPopup(icon+" "+u.role);
+  }
+
+  renderList();
+}
+
+/* ========= LISTA ========= */
+async function renderList(){
+
+  const {data} = await sb.from("locations").select("*");
+
+  users.innerHTML = data.map(u=>`
+    <div class="user-item">
+      ${u.role === "driver" ? "🚖 Conductor" : "📍 Cliente"}<br>
+      ${u.lat.toFixed(4)}, ${u.lng.toFixed(4)}
+    </div>
+  `).join("");
+}
+
+/* ========= VIAJES ========= */
+async function createTrip(){
+
+  if(role !== "client")
+    return alert("Solo clientes");
+
+  const dest = document.getElementById("dest").value;
+
+  await sb.from("trips").insert({
+    client_id:user.id,
+    destination:dest,
+    status:"pending"
+  });
+
+  alert("Viaje solicitado");
+}
+
+/* ========= LOGOUT ========= */
+function logout(){
+  location.reload();
+}
+
 </script>
+
 </body>
 </html>
-
-```
