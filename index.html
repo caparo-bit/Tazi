@@ -3,111 +3,68 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Taxi Madrid · Red</title>
+<title>Ride System Pro</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-body{
-  margin:0;
-  font-family:system-ui;
-  background:#0f1117;
-  color:white;
-  overflow:hidden;
-}
+body{margin:0;font-family:system-ui;background:#0f1117;color:white;}
+#map{height:55vh;}
+#panel{height:45vh;background:#161926;padding:10px;overflow:auto;}
 
-#topbar{
-  height:52px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:0 12px;
-  background:#12141d;
-  border-bottom:1px solid #2a2a45;
-}
-
-#map{height:60vh;}
-
-#panel{
-  height:40vh;
-  background:#161926;
-  padding:12px;
-}
-
-input,select{
+input,select,button{
   width:100%;
   padding:10px;
-  margin:6px 0;
-  border:none;
+  margin:5px 0;
   border-radius:8px;
-  background:#0f1117;
-  color:white;
+  border:none;
 }
 
-button{
-  width:100%;
-  padding:10px;
-  border:none;
-  border-radius:8px;
-  background:#3ecf8e;
-  font-weight:bold;
-}
+button{background:#3ecf8e;font-weight:bold;cursor:pointer;}
 
+.card{
+  background:#1a1a2e;
+  padding:8px;
+  margin:5px 0;
+  border-radius:8px;
+}
 .badge{
-  display:inline-block;
-  padding:4px 8px;
+  padding:3px 6px;
   border-radius:6px;
   font-size:.75rem;
-  margin-bottom:6px;
 }
-
-.driver{ background:#3ecf8e;color:black; }
-.client{ background:#3b82f6;color:white; }
-
-.user-item{
-  background:#1a1a2e;
-  padding:6px;
-  margin-top:5px;
-  border-radius:8px;
-  font-size:.85rem;
-}
+.pending{background:#f59e0b;color:black;}
+.accepted{background:#3b82f6;}
+.done{background:#10b981;}
 </style>
 </head>
 
 <body>
 
-<div id="topbar">
-  <strong>🚕 Red Taxi Madrid</strong>
-  <button onclick="logout()">Salir</button>
-</div>
-
 <div id="map"></div>
 
 <div id="panel">
 
-  <div id="roleBox"></div>
+<select id="role">
+  <option value="client">Cliente</option>
+  <option value="driver">Conductor</option>
+</select>
 
-  <select id="roleSelect">
-    <option value="client">Cliente</option>
-    <option value="driver">Conductor</option>
-  </select>
+<button onclick="setRole()">Entrar</button>
 
-  <button onclick="setRole()">Entrar con rol</button>
+<input id="dest" placeholder="Destino"/>
 
-  <input id="dest" placeholder="Destino (solo cliente)"/>
+<button onclick="createTrip()">Solicitar viaje</button>
 
-  <button onclick="createTrip()">Solicitar viaje</button>
-
-  <h4>Usuarios en vivo</h4>
-  <div id="users"></div>
+<h4>Viajes</h4>
+<div id="trips"></div>
 
 </div>
 
 <script>
 
-/* ========= SUPABASE ========= */
 const sb = supabase.createClient(
   "https://ejbvfirfodfktekgpwkm.supabase.co",
   "TU_ANON_KEY"
@@ -115,133 +72,162 @@ const sb = supabase.createClient(
 
 let user, role;
 
-/* ========= LOGIN ANON ========= */
-async function init(){
+/* ================= MAPA ================= */
+const map = L.map("map").setView([40.4168,-3.7038],13);
 
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
+.addTo(map);
+
+/* ================= LOGIN ANON ================= */
+(async()=>{
   const {data} = await sb.auth.signInAnonymously();
   user = data.user;
+  listenTrips();
+  listenDrivers();
+})();
 
-  listenUsers();
-}
-
-init();
-
-/* ========= ROLE ========= */
+/* ================= ROLE ================= */
 async function setRole(){
-
-  role = roleSelect.value;
+  role = role.value;
 
   await sb.from("profiles").upsert({
     id:user.id,
     role
   });
 
-  roleBox.innerHTML =
-    `<span class="badge ${role}">
-      Rol: ${role}
-    </span>`;
+  if(role === "driver") startDriverGPS();
 }
 
-/* ========= MAPA ========= */
-const map = L.map("map").setView([40.4168,-3.7038],13);
+/* ================= GPS DRIVER ================= */
+function startDriverGPS(){
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
-.addTo(map);
+  navigator.geolocation.watchPosition(async pos=>{
 
-let markers = {};
+    await sb.from("locations").upsert({
+      user_id:user.id,
+      role:"driver",
+      lat:pos.coords.latitude,
+      lng:pos.coords.longitude,
+      updated_at:new Date()
+    });
 
-/* ========= GPS ========= */
-navigator.geolocation.watchPosition(async pos=>{
-
-  const lat = pos.coords.latitude;
-  const lng = pos.coords.longitude;
-
-  await sb.from("locations").upsert({
-    user_id:user.id,
-    role,
-    lat,
-    lng,
-    updated_at:new Date()
   });
 
-});
-
-/* ========= ESCUCHAR USUARIOS ========= */
-function listenUsers(){
-
-  sb.channel("live")
-  .on("postgres_changes",
-    {event:"*",schema:"public",table:"locations"},
-    payload=>renderUsers(payload.new)
-  )
-  .subscribe();
-
-  loadAll();
 }
 
-async function loadAll(){
-
-  const {data} = await sb.from("locations").select("*");
-
-  data.forEach(renderUsers);
+/* ================= MATCHING ================= */
+function distance(a,b){
+  return Math.abs(a.lat-b.lat)+Math.abs(a.lng-b.lng);
 }
 
-/* ========= DIBUJAR EN MAPA ========= */
-function renderUsers(u){
-
-  if(!u || !u.lat) return;
-
-  const icon =
-    u.role === "driver"
-    ? "🚖"
-    : "📍";
-
-  const latlng = [u.lat,u.lng];
-
-  if(markers[u.user_id]){
-    markers[u.user_id].setLatLng(latlng);
-  }else{
-    markers[u.user_id] = L.marker(latlng)
-      .addTo(map)
-      .bindPopup(icon+" "+u.role);
-  }
-
-  renderList();
-}
-
-/* ========= LISTA ========= */
-async function renderList(){
-
-  const {data} = await sb.from("locations").select("*");
-
-  users.innerHTML = data.map(u=>`
-    <div class="user-item">
-      ${u.role === "driver" ? "🚖 Conductor" : "📍 Cliente"}<br>
-      ${u.lat.toFixed(4)}, ${u.lng.toFixed(4)}
-    </div>
-  `).join("");
-}
-
-/* ========= VIAJES ========= */
+/* ================= CREAR VIAJE ================= */
 async function createTrip(){
 
-  if(role !== "client")
-    return alert("Solo clientes");
+  if(role !== "client") return alert("Solo clientes");
 
-  const dest = document.getElementById("dest").value;
+  const dest = dest.value;
+
+  const {data:drivers} = await sb
+    .from("locations")
+    .select("*")
+    .eq("role","driver");
+
+  if(!drivers.length) return alert("No drivers");
+
+  const client = {lat:40.4168,lng:-3.7038};
+
+  let best = drivers[0];
+
+  drivers.forEach(d=>{
+    if(distance(d,client) < distance(best,client)){
+      best = d;
+    }
+  });
 
   await sb.from("trips").insert({
     client_id:user.id,
+    driver_id:best.user_id,
     destination:dest,
     status:"pending"
   });
 
-  alert("Viaje solicitado");
 }
 
-/* ========= LOGOUT ========= */
-function logout(){
-  location.reload();
+/* ================= VIAJES ================= */
+function listenTrips(){
+
+  sb.channel("trips")
+  .on("postgres_changes",
+    {event:"*",schema:"public",table:"trips"},
+    payload=>renderTrips(payload.new)
+  )
+  .subscribe();
+
+  loadTrips();
+}
+
+async function loadTrips(){
+
+  const {data} = await sb.from("trips").select("*");
+
+  data.forEach(renderTrips);
+}
+
+/* ================= UI VIAJES ================= */
+function renderTrips(t){
+
+  if(!t) return;
+
+  let badge =
+    t.status==="pending" ? "pending" :
+    t.status==="accepted" ? "accepted" : "done";
+
+  trips.innerHTML += `
+    <div class="card">
+      🚕 ${t.destination}<br>
+      👤 ${t.client_id}<br>
+      🚖 ${t.driver_id || "esperando"}<br>
+      <span class="badge ${badge}">${t.status}</span><br>
+
+      ${role==="driver" && t.status==="pending" ?
+        `<button onclick="acceptTrip('${t.id}')">Aceptar</button>` : ""}
+    </div>
+  `;
+}
+
+/* ================= ACEPTAR VIAJE ================= */
+async function acceptTrip(id){
+
+  await sb.from("trips")
+    .update({status:"accepted"})
+    .eq("id",id);
+
+}
+
+/* ================= DRIVERS LIVE ================= */
+function listenDrivers(){
+
+  sb.channel("drivers")
+  .on("postgres_changes",
+    {event:"*",schema:"public",table:"locations"},
+    loadDrivers
+  )
+  .subscribe();
+}
+
+async function loadDrivers(){
+
+  const {data} = await sb
+    .from("locations")
+    .select("*")
+    .eq("role","driver");
+
+  data.forEach(d=>{
+    L.marker([d.lat,d.lng])
+      .addTo(map)
+      .bindPopup("🚖 driver");
+  });
+
 }
 
 </script>
