@@ -1,252 +1,128 @@
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Tazi · Taxi Madrid</title>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<style>
-body{
-  margin:0;
-  font-family:system-ui;
-  background:#0f1117;
-  color:white;
-  overflow:hidden;
-}
-
-#topbar{
-  height:52px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:0 12px;
-  background:#12141d;
-  border-bottom:1px solid #2a2a45;
-}
-
-#map{
-  height:58vh;
-}
-
-#panel{
-  height:42vh;
-  background:#161926;
-  border-radius:22px 22px 0 0;
-  padding:14px;
-  overflow:auto;
-}
-
-input{
-  width:100%;
-  padding:12px;
-  border-radius:10px;
-  border:none;
-  background:#0f1117;
-  color:white;
-  margin-bottom:10px;
-}
-
-button{
-  width:100%;
-  padding:12px;
-  border:none;
-  border-radius:10px;
-  background:#3ecf8e;
-  font-weight:700;
-  cursor:pointer;
-}
-
-.card{
-  margin-top:10px;
-  padding:10px;
-  background:#1a1a2e;
-  border-radius:10px;
-}
-
-.small{
-  color:#9ca3af;
-  font-size:.85rem;
-}
-
-.suggestions{
-  background:#0f1117;
-  border-radius:10px;
-  max-height:120px;
-  overflow:auto;
-  margin-bottom:10px;
-}
-
-.suggestions div{
-  padding:8px;
-  border-bottom:1px solid #222;
-  cursor:pointer;
-}
-
-.suggestions div:hover{
-  background:#1a1a2e;
-}
-</style>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Tazi · Taxi Madrid</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #0f1117; color: white; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        #topbar { height: 52px; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; background: #12141d; border-bottom: 1px solid #2a2a45; flex-shrink: 0; }
+        #map { flex-grow: 1; min-height: 200px; }
+        #panel { height: 45%; background: #161926; border-radius: 20px 20px 0 0; padding: 16px; overflow-y: auto; flex-shrink: 0; box-shadow: 0 -4px 10px rgba(0,0,0,0.3); }
+        input { width: 100%; padding: 14px; border-radius: 12px; border: none; background: #202433; color: white; margin-bottom: 10px; box-sizing: border-box; }
+        button { width: 100%; padding: 14px; border: none; border-radius: 12px; background: #3ecf8e; color: #000; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
+        button:active { opacity: 0.8; }
+        .card { margin-top: 10px; padding: 12px; background: #1a1a2e; border-radius: 10px; font-size: 0.95rem; }
+        .small { color: #9ca3af; font-size: 0.8rem; margin-top: 4px; }
+        #sug { background: #202433; border-radius: 10px; max-height: 150px; overflow-y: auto; margin-bottom: 10px; display: none; }
+        .sug-item { padding: 12px; border-bottom: 1px solid #2a2a45; cursor: pointer; font-size: 0.9rem; }
+        .sug-item:hover { background: #2a2a45; }
+        #status-msg { padding: 10px; color: #ff6b6b; font-size: 0.8rem; text-align: center; display: none; }
+    </style>
 </head>
-
 <body>
 
 <div id="topbar">
-  <strong>🚕 Taxi Madrid</strong>
-  <button onclick="toggleFS()">⛶</button>
+    <strong style="font-size: 1.2rem;">🚕 Tazi</strong>
+    <button onclick="toggleFS()" style="width: auto; background: none; color: #9ca3af;">⛶</button>
 </div>
 
 <div id="map"></div>
 
 <div id="panel">
+    <input id="dest" placeholder="¿A dónde vamos hoy?" oninput="searchSug(this.value)" autocomplete="off"/>
+    <div id="sug"></div>
+    <div id="status-msg"></div>
+    <button id="calc-btn" onclick="calcRoute()">Calcular trayecto</button>
 
-  <input id="dest" placeholder="Destino en Madrid..."
-         oninput="searchSug(this.value)"/>
-
-  <div id="sug" class="suggestions"></div>
-
-  <button onclick="calcRoute()">Calcular trayecto</button>
-
-  <div class="card">📏 Distancia: <span id="dist">--</span></div>
-  <div class="card">⏱ Tiempo: <span id="time">--</span></div>
-  <div class="card">
-    🚕 Precio estimado: <span id="price">--</span>
-    <div class="small">Tarifa Madrid + tráfico estimado + hora punta</div>
-  </div>
-
+    <div class="card" style="display: flex; justify-content: space-between;">
+        <span>📏 Distancia: <b id="dist">--</b></span>
+        <span>⏱ Tiempo: <b id="time">--</b></span>
+    </div>
+    <div class="card">
+        <div>🚕 Precio estimado: <b id="price" style="color: #3ecf8e; font-size: 1.2rem;">--</b></div>
+        <div class="small">Tarifa oficial Madrid + Estimación tráfico</div>
+    </div>
 </div>
 
 <script>
+    const map = L.map("map").setView([40.4168, -3.7038], 13);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
 
-/* ================= MAPA ================= */
-const map = L.map("map").setView([40.4168,-3.7038], 12);
+    let userMarker, routeLine, selected;
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
-.addTo(map);
+    // Geolocalización
+    navigator.geolocation.watchPosition(pos => {
+        const p = [pos.coords.latitude, pos.coords.longitude];
+        if (!userMarker) {
+            userMarker = L.marker(p).addTo(map).bindPopup("Tu ubicación");
+            map.setView(p, 14);
+        } else {
+            userMarker.setLatLng(p);
+        }
+    }, err => showStatus("No pudimos acceder a tu GPS."), { enableHighAccuracy: true });
 
-let userMarker, routeLine;
-
-/* ================= GPS ================= */
-let user = null;
-
-navigator.geolocation.watchPosition(pos=>{
-  user = pos.coords;
-
-  const p = [user.latitude,user.longitude];
-
-  if(!userMarker){
-    userMarker = L.marker(p).addTo(map)
-      .bindPopup("📍 Posición actual");
-  }else{
-    userMarker.setLatLng(p);
-  }
-});
-
-/* ================= TARIFA MADRID ================= */
-const TAXI = {
-  start: 2.55,
-  km: 1.35,
-  min: 0.30
-};
-
-const PEAK_EXTRA = 0.20;
-
-function isPeakHour(){
-  const h = new Date().getHours();
-  return (h>=7&&h<=10)||(h>=17&&h<=20);
-}
-
-/* ================= AUTOCOMPLETE ================= */
-let selected = null;
-
-async function searchSug(q){
-
-  if(q.length < 3){
-    document.getElementById("sug").innerHTML="";
-    return;
-  }
-
-  const res = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&q=${q}`
-  );
-
-  const data = await res.json();
-
-  document.getElementById("sug").innerHTML =
-    data.slice(0,5).map(x=>`
-      <div onclick="setDest('${x.display_name}',${x.lat},${x.lon})">
-        ${x.display_name}
-      </div>
-    `).join("");
-}
-
-function setDest(name,lat,lon){
-  document.getElementById("dest").value = name;
-  document.getElementById("sug").innerHTML="";
-  selected = {lat:parseFloat(lat),lon:parseFloat(lon)};
-}
-
-/* ================= RUTA REAL (OSRM) ================= */
-async function calcRoute(){
-
-  if(!user || !selected)
-    return alert("Falta GPS o destino");
-
-  const url =
-`https://router.project-osrm.org/route/v1/driving/`+
-`${user.longitude},${user.latitude};${selected.lon},${selected.lat}?overview=full&geometries=geojson`;
-
-  const res = await fetch(url);
-  const data = await res.json();
-
-  const route = data.routes[0];
-
-  const km = route.distance / 1000;
-  const min = route.duration / 60;
-
-  document.getElementById("dist").innerText =
-    km.toFixed(1)+" km";
-
-  document.getElementById("time").innerText =
-    Math.round(min)+" min";
-
-  let price =
-    TAXI.start +
-    km*TAXI.km +
-    min*TAXI.min;
-
-  if(isPeakHour()){
-    price += km * PEAK_EXTRA;
-  }
-
-  document.getElementById("price").innerText =
-    price.toFixed(2)+" €";
-
-  /* dibujar ruta */
-  if(routeLine) map.removeLayer(routeLine);
-
-  routeLine = L.geoJSON(route.geometry,{
-    style:{
-      color:"#3ecf8e",
-      weight:5
+    function showStatus(msg) {
+        const s = document.getElementById("status-msg");
+        s.innerText = msg;
+        s.style.display = msg ? "block" : "none";
     }
-  }).addTo(map);
 
-  map.fitBounds(routeLine.getBounds());
-}
+    async function searchSug(q) {
+        if (q.length < 3) return (document.getElementById("sug").style.display = "none");
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q},Madrid`);
+        const data = await res.json();
+        const sug = document.getElementById("sug");
+        sug.innerHTML = data.slice(0, 4).map(x => `<div class="sug-item" onclick="setDest('${x.display_name.replace(/'/g, "")}', ${x.lat}, ${x.lon})">${x.display_name}</div>`).join("");
+        sug.style.display = data.length ? "block" : "none";
+    }
 
-/* ================= FULLSCREEN ================= */
-function toggleFS(){
-  if(!document.fullscreenElement){
-    document.documentElement.requestFullscreen();
-  }else{
-    document.exitFullscreen();
-  }
-}
+    function setDest(name, lat, lon) {
+        document.getElementById("dest").value = name;
+        document.getElementById("sug").style.display = "none";
+        selected = { lat, lon };
+    }
 
+    async function calcRoute() {
+        if (!userMarker || !selected) return showStatus("Por favor, selecciona un destino válido.");
+        showStatus("");
+        const userPos = userMarker.getLatLng();
+        const url = `https://router.project-osrm.org/route/v1/driving/${userPos.lng},${userPos.lat};${selected.lon},${selected.lat}?overview=full&geometries=geojson`;
+        
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            const route = data.routes[0];
+            const km = route.distance / 1000;
+            const min = route.duration / 60;
+            
+            document.getElementById("dist").innerText = km.toFixed(1) + " km";
+            document.getElementById("time").innerText = Math.round(min) + " min";
+            
+            let price = 2.55 + (km * 1.35) + (min * 0.30);
+            const h = new Date().getHours();
+            if ((h >= 7 && h <= 10) || (h >= 17 && h <= 20)) price += (km * 0.20);
+            document.getElementById("price").innerText = price.toFixed(2) + " €";
+
+            if (routeLine) map.removeLayer(routeLine);
+            routeLine = L.geoJSON(route.geometry, { style: { color: "#3ecf8e", weight: 6 } }).addTo(map);
+            map.fitBounds(routeLine.getBounds(), { padding: [20, 20] });
+        } catch(e) {
+            showStatus("Error al calcular la ruta.");
+        }
+    }
+
+    function toggleFS() {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+    }
 </script>
-
 </body>
 </html>
+
+```
