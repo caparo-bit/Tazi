@@ -7,14 +7,876 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    /* ... (estilos idénticos a la versión anterior) ... */
-    /* Mantén todos los estilos exactamente igual, no los repito por brevedad */
-    /* Pero asegúrate de que estén todos, copia del código anterior */
+    /* ===== RESET Y ESTILOS BASE ===== */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html,
+    body {
+      height: 100%;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+    }
+    :root {
+      --blue: #1a73e8;
+      --blue2: #4285f4;
+      --red: #ea4335;
+      --green: #34a853;
+      --text: #202124;
+      --muted: #5f6368;
+      --border: #e0e0e0;
+      --bg: #f5f5f5;
+      --sh: 0 1px 4px rgba(0, 0, 0, .2), 0 4px 12px rgba(0, 0, 0, .1);
+      --sh2: 0 2px 8px rgba(0, 0, 0, .25), 0 8px 28px rgba(0, 0, 0, .15);
+      --auth-bg: #0f1117;
+      --auth-s: #1a1a2e;
+      --auth-b: #2a2a45;
+      --teal: #3ecf8e;
+      --teal-d: rgba(62, 207, 142, .12);
+      --err: #f87171;
+      --muted2: #6b7280;
+    }
+
+    /* ===== AUTH ===== */
+    #screen-auth {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      background: var(--auth-bg);
+      position: relative;
+      overflow: hidden;
+    }
+    #screen-auth::before {
+      content: '';
+      position: fixed;
+      top: -180px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(62, 207, 142, .15) 0%, transparent 70%);
+      pointer-events: none;
+      animation: aupulse 4s ease-in-out infinite;
+    }
+    @keyframes aupulse {
+      0%,
+      100% {
+        opacity: .6;
+        transform: translateX(-50%) scale(1);
+      }
+      50% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1.06);
+      }
+    }
+    .card {
+      position: relative;
+      background: var(--auth-s);
+      border: 1px solid var(--auth-b);
+      border-radius: 16px;
+      padding: 2.5rem 2.25rem;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 0 0 1px rgba(62, 207, 142, .05), 0 24px 60px rgba(0, 0, 0, .6);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: 2rem;
+    }
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      background: var(--teal-d);
+      border: 1px solid rgba(62, 207, 142, .3);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .brand-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+    .brand-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #e8e8f0;
+    }
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #e8e8f0;
+      margin-bottom: .3rem;
+    }
+    .subtitle {
+      font-size: .85rem;
+      color: var(--muted2);
+      margin-bottom: 2rem;
+    }
+    label {
+      display: block;
+      font-size: .75rem;
+      font-weight: 600;
+      color: var(--muted2);
+      margin-bottom: .35rem;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .field {
+      margin-bottom: 1rem;
+    }
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      background: rgba(255, 255, 255, .05);
+      border: 1px solid var(--auth-b);
+      border-radius: 9px;
+      color: #e8e8f0;
+      font-family: inherit;
+      font-size: .9rem;
+      padding: .7rem .9rem;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    input[type="email"]:focus,
+    input[type="password"]:focus {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px rgba(62, 207, 142, .12);
+    }
+    input[type="email"]::placeholder,
+    input[type="password"]::placeholder {
+      color: #3d3d5c;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: .75rem;
+      margin-top: 1.25rem;
+      background: var(--teal);
+      color: #0f1117;
+      font-family: inherit;
+      font-size: .9rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+    }
+    .btn:hover {
+      opacity: .88;
+    }
+    .btn:active {
+      transform: scale(.98);
+    }
+    .btn:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+    .btn-ghost {
+      background: transparent;
+      color: #e8e8f0;
+      border: 1px solid var(--auth-b);
+      margin-top: .6rem;
+    }
+    .btn-ghost:hover {
+      border-color: var(--teal);
+      color: var(--teal);
+      opacity: 1;
+    }
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      color: var(--muted2);
+      font-size: .78rem;
+      margin: 1rem 0;
+    }
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--auth-b);
+    }
+    .footer-link {
+      text-align: center;
+      font-size: .82rem;
+      color: var(--muted2);
+      margin-top: 1.25rem;
+    }
+    .footer-link a {
+      color: var(--teal);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .amsg {
+      font-size: .82rem;
+      padding: .65rem .85rem;
+      border-radius: 8px;
+      margin-bottom: .75rem;
+      display: none;
+    }
+    .amsg.error {
+      background: rgba(248, 113, 113, .1);
+      border: 1px solid rgba(248, 113, 113, .25);
+      color: var(--err);
+    }
+    .amsg.success {
+      background: var(--teal-d);
+      border: 1px solid rgba(62, 207, 142, .25);
+      color: var(--teal);
+    }
+    .amsg.show {
+      display: block;
+    }
+    .sp {
+      display: inline-block;
+      width: 13px;
+      height: 13px;
+      border: 2px solid rgba(15, 17, 23, .3);
+      border-top-color: #0f1117;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle;
+      margin-right: 5px;
+    }
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    .view {
+      display: none;
+    }
+    .view.active {
+      display: block;
+    }
+
+    /* ===== MAPA ===== */
+    #screen-map {
+      display: none;
+      position: fixed;
+      inset: 0;
+      flex-direction: column;
+      background: var(--bg);
+    }
+    #screen-map.active {
+      display: flex;
+    }
+    #map-wrap {
+      position: relative;
+      height: 55vh;
+      min-height: 260px;
+      flex-shrink: 0;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Buscador */
+    #search-bar {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 500;
+      width: calc(100% - 20px);
+      max-width: 420px;
+    }
+    .sbox {
+      background: white;
+      border-radius: 26px;
+      box-shadow: var(--sh2);
+      display: flex;
+      align-items: center;
+      padding: .5rem .75rem .5rem 1rem;
+      gap: .5rem;
+    }
+    .sbox input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-family: inherit;
+      font-size: .9rem;
+      color: var(--text);
+      background: transparent;
+    }
+    .sbox input::placeholder {
+      color: #9aa0a6;
+    }
+    .sbox-btn {
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: .9rem;
+    }
+    .sbox-btn:hover {
+      background: #1557b0;
+    }
+    .sbox-clear {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 1rem;
+      padding: 2px 4px;
+      display: none;
+    }
+    #ac-list {
+      background: white;
+      border-radius: 14px;
+      margin-top: 6px;
+      box-shadow: var(--sh2);
+      overflow: hidden;
+      display: none;
+    }
+    .ac-item {
+      padding: .6rem 1rem;
+      font-size: .84rem;
+      color: var(--text);
+      cursor: pointer;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      align-items: flex-start;
+      gap: .6rem;
+    }
+    .ac-item:last-child {
+      border-bottom: none;
+    }
+    .ac-item:hover {
+      background: #f8f9fa;
+    }
+    .ac-ic {
+      color: var(--muted);
+      font-size: .85rem;
+      padding-top: 1px;
+      flex-shrink: 0;
+    }
+    .ac-name {
+      font-weight: 500;
+      line-height: 1.3;
+    }
+    .ac-sub {
+      font-size: .73rem;
+      color: var(--muted);
+    }
+
+    .map-fab {
+      position: absolute;
+      right: 10px;
+      z-index: 500;
+      background: white;
+      border: none;
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      cursor: pointer;
+      box-shadow: var(--sh);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      transition: box-shadow .15s;
+    }
+    .map-fab:hover {
+      box-shadow: var(--sh2);
+    }
+    #btn-center {
+      bottom: 56px;
+    }
+    #btn-expand {
+      bottom: 10px;
+    }
+    #btn-logout {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 500;
+      background: rgba(255, 255, 255, .9);
+      backdrop-filter: blur(6px);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: .3rem .75rem;
+      font-family: inherit;
+      font-size: .74rem;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    #btn-logout:hover {
+      color: var(--red);
+      border-color: var(--red);
+    }
+
+    .my-dot {
+      width: 16px;
+      height: 16px;
+      background: var(--blue2);
+      border: 2.5px solid white;
+      border-radius: 50%;
+      box-shadow: 0 0 0 5px rgba(66, 133, 244, .2);
+      animation: glow 2s ease-in-out infinite;
+    }
+    @keyframes glow {
+      0%,
+      100% {
+        box-shadow: 0 0 0 5px rgba(66, 133, 244, .2);
+      }
+      50% {
+        box-shadow: 0 0 0 12px rgba(66, 133, 244, .0);
+      }
+    }
+
+    #map-wrap.fullscreen {
+      position: fixed;
+      inset: 0;
+      height: 100vh;
+      z-index: 2000;
+    }
+    #map-wrap.fullscreen~#bottom-panel {
+      display: none;
+    }
+
+    /* ===== PANEL INFERIOR ===== */
+    #bottom-panel {
+      flex: 1;
+      overflow-y: auto;
+      background: white;
+      position: relative;
+    }
+    .handle-row {
+      display: flex;
+      justify-content: center;
+      padding: 8px 0 4px;
+    }
+    .handle {
+      width: 36px;
+      height: 4px;
+      background: #dadce0;
+      border-radius: 2px;
+    }
+    #gps-row {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .4rem 1rem .6rem;
+      font-size: .78rem;
+      color: var(--muted);
+    }
+    .sdot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #dadce0;
+      flex-shrink: 0;
+    }
+    .sdot.on {
+      background: var(--green);
+      animation: blink 1.5s ease-in-out infinite;
+    }
+    @keyframes blink {
+      0%,
+      100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: .35;
+      }
+    }
+    #coords-mini {
+      padding: .3rem 1rem;
+      font-size: .71rem;
+      color: var(--muted);
+      font-family: 'Courier New', monospace;
+      background: #fafafa;
+      border-bottom: 1px solid #f0f0f0;
+      display: none;
+    }
+    .section {
+      padding: .75rem 1rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .section-title {
+      font-size: .69rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: .6rem;
+    }
+    #no-dest {
+      text-align: center;
+      padding: 1.75rem 1rem 1.5rem;
+      color: var(--muted);
+      font-size: .85rem;
+    }
+    #no-dest .nd-icon {
+      font-size: 2.2rem;
+      margin-bottom: .5rem;
+    }
+    #route-card {
+      display: none;
+    }
+    .route-row {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: .75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+    .route-icon {
+      font-size: 1.6rem;
+      flex-shrink: 0;
+    }
+    .route-info {
+      flex: 1;
+    }
+    .route-km {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .route-sub {
+      font-size: .75rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .route-time {
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--blue);
+      background: rgba(26, 115, 232, .08);
+      border-radius: 8px;
+      padding: .25rem .6rem;
+      flex-shrink: 0;
+    }
+
+    /* Selector tarifa */
+    #tarifa-section {
+      display: none;
+    }
+    .chips {
+      display: flex;
+      gap: .4rem;
+      flex-wrap: wrap;
+      margin-bottom: .75rem;
+    }
+    .chip {
+      padding: .32rem .75rem;
+      border-radius: 20px;
+      font-size: .76rem;
+      font-weight: 500;
+      border: 1.5px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      background: white;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .chip:hover {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+    .chip.active {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: white;
+    }
+
+    /* Precio */
+    #price-card {
+      display: none;
+      margin-top: .6rem;
+    }
+
+    .price-fixed {
+      background: linear-gradient(135deg, #34a853 0%, #1e7e34 100%);
+      border-radius: 14px;
+      padding: 1rem 1.25rem;
+      color: white;
+      margin-bottom: .65rem;
+    }
+    .pf-label {
+      font-size: .74rem;
+      opacity: .85;
+      margin-bottom: .2rem;
+    }
+    .pf-main {
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: -.02em;
+      line-height: 1;
+    }
+    .pf-desc {
+      font-size: .75rem;
+      opacity: .85;
+      margin-top: .3rem;
+      line-height: 1.4;
+    }
+    .pf-badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, .2);
+      border-radius: 6px;
+      padding: .15rem .5rem;
+      font-size: .7rem;
+      font-weight: 600;
+      margin-top: .4rem;
+    }
+
+    .price-meter {
+      background: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%);
+      border-radius: 14px;
+      padding: 1rem 1.25rem;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: .65rem;
+    }
+    .pm-left .pm-label {
+      font-size: .74rem;
+      opacity: .85;
+      margin-bottom: .15rem;
+    }
+    .pm-left .pm-main {
+      font-size: 2.1rem;
+      font-weight: 700;
+      letter-spacing: -.02em;
+      line-height: 1;
+    }
+    .pm-right {
+      text-align: center;
+      background: rgba(255, 255, 255, .18);
+      border-radius: 10px;
+      padding: .4rem .7rem;
+      min-width: 72px;
+    }
+    .pm-right .pm-tag {
+      font-size: .71rem;
+      font-weight: 600;
+    }
+
+    .price-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: .5rem;
+      margin-bottom: .6rem;
+    }
+    .pg-item {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: .6rem .5rem;
+      text-align: center;
+    }
+    .pg-val {
+      font-size: .92rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .pg-key {
+      font-size: .64rem;
+      color: var(--muted);
+      margin-top: 2px;
+      line-height: 1.3;
+    }
+
+    .tarifa-explain {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 10px;
+      padding: .7rem .9rem;
+      margin-bottom: .6rem;
+    }
+    .te-title {
+      font-size: .72rem;
+      font-weight: 700;
+      color: #92400e;
+      margin-bottom: .4rem;
+      display: flex;
+      align-items: center;
+      gap: .3rem;
+    }
+    .te-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      font-size: .75rem;
+      color: #78350f;
+      padding: .2rem 0;
+      border-bottom: 1px solid #fde68a;
+    }
+    .te-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .te-val {
+      font-weight: 600;
+      white-space: nowrap;
+      margin-left: .5rem;
+    }
+
+    .info-note {
+      font-size: .7rem;
+      color: var(--muted);
+      text-align: center;
+      margin-top: .5rem;
+      line-height: 1.55;
+      padding: 0 .25rem;
+    }
+
+    #route-loading {
+      display: none;
+      text-align: center;
+      padding: .75rem 1rem;
+      font-size: .82rem;
+      color: var(--muted);
+    }
+
+    .leaflet-control-zoom {
+      border-radius: 8px !important;
+      overflow: hidden;
+      box-shadow: var(--sh) !important;
+      border: none !important;
+    }
+    .leaflet-control-zoom a {
+      color: var(--muted) !important;
+      font-weight: 600 !important;
+    }
+    .leaflet-popup-content-wrapper {
+      border-radius: 12px !important;
+      box-shadow: var(--sh2) !important;
+      font-family: 'Inter', sans-serif !important;
+    }
+    .leaflet-popup-tip {
+      display: none;
+    }
+    .leaflet-popup-content {
+      margin: .65rem .9rem !important;
+      font-size: .85rem !important;
+    }
   </style>
 </head>
 <body>
 
-  <!-- ... (HTML idéntico al anterior) ... -->
+  <!-- ═══ AUTH ═══ -->
+  <div id="screen-auth">
+    <div class="card">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M13.5 3L4.5 14h8.25L10.5 21l9-11h-8.25L13.5 3Z" fill="#3ecf8e" />
+          </svg>
+        </div>
+        <span class="brand-name">Tazi</span>
+      </div>
+      <div id="amsg" class="amsg"></div>
+      <div id="view-login" class="view active">
+        <h1>Bienvenido</h1>
+        <p class="subtitle">Tu taxi en Madrid</p>
+        <div class="field">
+          <label for="le">Correo</label>
+          <input id="le" type="email" placeholder="tu@correo.com" autocomplete="email" />
+        </div>
+        <div class="field">
+          <label for="lp">Contraseña</label>
+          <input id="lp" type="password" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+        <button id="btn-login" class="btn" onclick="doLogin()">Iniciar sesión</button>
+        <div class="divider">o</div>
+        <button class="btn btn-ghost" onclick="doMagic()">Enviar enlace mágico</button>
+        <p class="footer-link">¿Sin cuenta? <a href="#" onclick="sw('register')">Regístrate</a></p>
+      </div>
+      <div id="view-register" class="view">
+        <h1>Crear cuenta</h1>
+        <p class="subtitle">Empieza a usar Tazi gratis</p>
+        <div class="field">
+          <label for="re">Correo</label>
+          <input id="re" type="email" placeholder="tu@correo.com" autocomplete="email" />
+        </div>
+        <div class="field">
+          <label for="rp">Contraseña</label>
+          <input id="rp" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+        </div>
+        <button id="btn-reg" class="btn" onclick="doRegister()">Crear cuenta</button>
+        <p class="footer-link">¿Ya tienes cuenta? <a href="#" onclick="sw('login')">Inicia sesión</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MAPA ═══ -->
+  <div id="screen-map">
+    <div id="map-wrap">
+      <div id="map"></div>
+      <div id="search-bar">
+        <div class="sbox">
+          <span style="color:#5f6368;font-size:.9rem;flex-shrink:0">🔍</span>
+          <input id="dest-input" type="text" placeholder="¿A dónde vas?" oninput="onSI()" onkeydown="if(event.key==='Enter')doSearch()" />
+          <button class="sbox-clear" id="btn-clear" onclick="clearDest()">✕</button>
+          <button class="sbox-btn" onclick="doSearch()">→</button>
+        </div>
+        <div id="ac-list"></div>
+      </div>
+      <button id="btn-logout" onclick="doLogout()">✕ Salir</button>
+      <button class="map-fab" id="btn-center" onclick="centerMap()">◎</button>
+      <button class="map-fab" id="btn-expand" onclick="toggleFull()">⛶</button>
+    </div>
+
+    <div id="bottom-panel">
+      <div class="handle-row"><div class="handle"></div></div>
+      <div id="gps-row"><div class="sdot" id="sdot"></div><span id="stext">Conectando GPS…</span></div>
+      <div id="coords-mini"></div>
+
+      <div id="no-dest" class="section">
+        <div class="nd-icon">🗺️</div>
+        Busca un destino para ver la ruta<br />real por calles y el precio del taxi
+      </div>
+
+      <div id="route-loading" class="section">
+        <span class="sp" style="border-top-color:var(--blue)"></span> Calculando ruta por calles…
+      </div>
+
+      <div id="route-card" class="section">
+        <div class="section-title">Ruta por carretera</div>
+        <div class="route-row">
+          <div class="route-icon">🚗</div>
+          <div class="route-info">
+            <div class="route-km" id="route-km">—</div>
+            <div class="route-sub" id="route-sub">Distancia real por calles</div>
+          </div>
+          <div class="route-time" id="route-time">—</div>
+        </div>
+      </div>
+
+      <div id="tarifa-section" class="section">
+        <div class="section-title">Tarifa oficial Madrid 2026</div>
+        <div class="chips">
+          <button class="chip active" onclick="setTarifa('t1',this)">T1 · Día</button>
+          <button class="chip" onclick="setTarifa('t2',this)">T2 · Noche/Fest.</button>
+          <button class="chip" onclick="setTarifa('t4',this)">✈️ Apto→M30</button>
+          <button class="chip" onclick="setTarifa('t3',this)">✈️ Apto→fuera M30</button>
+          <button class="chip" onclick="setTarifa('t7',this)">🚉 Estaciones/IFEMA</button>
+        </div>
+        <div id="price-card"></div>
+      </div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
   </script>
@@ -33,18 +895,56 @@
     //  TARIFAS TAXI MADRID 2026 (OFICIAL)
     // ══════════════════════════════════════════════════════════════
     const TARIFAS = {
-      t1: { id: 'T1', nombre: 'Laborable diurno', horario: 'Lun–Vie 7:00–21:00 h', tipo: 'metro', bandera: 2.55, km: 1.40,
-        hora: 27.00, min: 4.50 },
-      t2: { id: 'T2', nombre: 'Nocturno y festivos', horario: 'Diario 21:00–7:00 h · Sáb/Dom/Fest 7:00–21:00 h',
-        tipo: 'metro', bandera: 3.20, km: 1.60, hora: 29.00, min: 5.50 },
-      t4: { id: 'T4', nombre: 'Aeropuerto → dentro M-30', horario: '24h · 365 días · Sin suplementos', tipo: 'fijo',
-        precio_fijo: 33.00, nota: 'Tarifa fija entre cualquier terminal (T1–T4) y cualquier punto dentro de la M-30. Sin recargo por equipaje, nº de pasajeros ni horario.' },
-      t3: { id: 'T3', nombre: 'Aeropuerto → fuera M-30', horario: '24h · 365 días', tipo: 'minimo_luego_metro',
-        minimo: 22.00, franquicia_km: 9.0, km_t1: 1.40, km_t2: 1.60,
-        nota: 'Mínimo 22 € cubre los primeros 9 km. Superados, el taxímetro sigue en T1 (día) o T2 (noche/fest).' },
-      t7: { id: 'T7', nombre: 'Estaciones y IFEMA', horario: '24h · 365 días', tipo: 'salida_especial', salida: 8.00,
-        franquicia_m: 1450, km: 1.40, km_noche: 1.60,
-        nota: 'Salida desde: Atocha · Chamartín · Av. América · Méndez Álvaro · IFEMA.\n8 € incluye los primeros 1.450 m. Luego T1 (día) o T2 (noche/fest).' }
+      t1: {
+        id: 'T1',
+        nombre: 'Laborable diurno',
+        horario: 'Lun–Vie 7:00–21:00 h',
+        tipo: 'metro',
+        bandera: 2.55,
+        km: 1.40,
+        hora: 27.00,
+        min: 4.50
+      },
+      t2: {
+        id: 'T2',
+        nombre: 'Nocturno y festivos',
+        horario: 'Diario 21:00–7:00 h · Sáb/Dom/Fest 7:00–21:00 h',
+        tipo: 'metro',
+        bandera: 3.20,
+        km: 1.60,
+        hora: 29.00,
+        min: 5.50
+      },
+      t4: {
+        id: 'T4',
+        nombre: 'Aeropuerto → dentro M-30',
+        horario: '24h · 365 días · Sin suplementos',
+        tipo: 'fijo',
+        precio_fijo: 33.00,
+        nota: 'Tarifa fija entre cualquier terminal (T1–T4) y cualquier punto dentro de la M-30. Sin recargo por equipaje, nº de pasajeros ni horario.'
+      },
+      t3: {
+        id: 'T3',
+        nombre: 'Aeropuerto → fuera M-30',
+        horario: '24h · 365 días',
+        tipo: 'minimo_luego_metro',
+        minimo: 22.00,
+        franquicia_km: 9.0,
+        km_t1: 1.40,
+        km_t2: 1.60,
+        nota: 'Mínimo 22 € cubre los primeros 9 km. Superados, el taxímetro sigue en T1 (día) o T2 (noche/fest).'
+      },
+      t7: {
+        id: 'T7',
+        nombre: 'Estaciones y IFEMA',
+        horario: '24h · 365 días',
+        tipo: 'salida_especial',
+        salida: 8.00,
+        franquicia_m: 1450,
+        km: 1.40,
+        km_noche: 1.60,
+        nota: 'Salida desde: Atocha · Chamartín · Av. América · Méndez Álvaro · IFEMA.\n8 € incluye los primeros 1.450 m. Luego T1 (día) o T2 (noche/fest).'
+      }
     };
 
     // ══════════════════════════════════════════════════════════════
@@ -65,24 +965,68 @@
     let fetchingRoute = false;
     let routeFetchTimeout = null;
     let lastRouteKm = null;
-    let isFlying = false; // para evitar múltiples animaciones
+    let isFlying = false;
 
     // ══════════════════════════════════════════════════════════════
-    //  AUTH UI (las mismas funciones, sin cambios)
+    //  AUTH UI
     // ══════════════════════════════════════════════════════════════
-    function showMsg(t, tp = 'error') { /* ... */ }
+    function showMsg(t, tp = 'error') {
+      const e = document.getElementById('amsg');
+      e.textContent = t;
+      e.className = 'amsg ' + tp + ' show';
+    }
 
-    function clearMsg() { /* ... */ }
+    function clearMsg() {
+      const e = document.getElementById('amsg');
+      e.className = 'amsg';
+      e.textContent = '';
+    }
 
-    function sw(n) { /* ... */ }
+    function sw(n) {
+      clearMsg();
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById('view-' + n).classList.add('active');
+    }
 
-    function ld(id, on, lbl) { /* ... */ }
+    function ld(id, on, lbl) {
+      const b = document.getElementById(id);
+      if (!b) return;
+      b.disabled = on;
+      b.innerHTML = on ? '<span class="sp"></span>Cargando…' : lbl;
+    }
 
-    async function doLogin() { /* ... */ }
+    async function doLogin() {
+      clearMsg();
+      const e = document.getElementById('le').value.trim(),
+        p = document.getElementById('lp').value;
+      if (!e || !p) { showMsg('Completa todos los campos.'); return; }
+      ld('btn-login', true, 'Iniciar sesión');
+      const { error } = await sb.auth.signInWithPassword({ email: e, password: p });
+      ld('btn-login', false, 'Iniciar sesión');
+      if (error) showMsg(error.message);
+    }
 
-    async function doRegister() { /* ... */ }
+    async function doRegister() {
+      clearMsg();
+      const e = document.getElementById('re').value.trim(),
+        p = document.getElementById('rp').value;
+      if (!e || !p) { showMsg('Completa todos los campos.'); return; }
+      if (p.length < 6) { showMsg('Mínimo 6 caracteres.'); return; }
+      ld('btn-reg', true, 'Crear cuenta');
+      const { error } = await sb.auth.signUp({ email: e, password: p });
+      ld('btn-reg', false, 'Crear cuenta');
+      if (error) showMsg(error.message);
+      else showMsg('¡Cuenta creada! Revisa tu correo.', 'success');
+    }
 
-    async function doMagic() { /* ... */ }
+    async function doMagic() {
+      clearMsg();
+      const e = document.getElementById('le').value.trim();
+      if (!e) { showMsg('Escribe tu correo primero.'); return; }
+      const { error } = await sb.auth.signInWithOtp({ email: e });
+      if (error) showMsg(error.message);
+      else showMsg('Enlace enviado — revisa tu bandeja.', 'success');
+    }
 
     async function doLogout() { stopGPS();
       await sb.auth.signOut(); }
@@ -185,19 +1129,59 @@
       document.getElementById('sdot').className = 'sdot' + (on ? ' on' : ''); }
 
     // ══════════════════════════════════════════════════════════════
-    //  BÚSQUEDA (idéntica)
+    //  BÚSQUEDA
     // ══════════════════════════════════════════════════════════════
     let acTimer = null;
 
-    function onSI() { /* ... */ }
+    function onSI() {
+      clearTimeout(acTimer);
+      const q = document.getElementById('dest-input').value.trim();
+      document.getElementById('btn-clear').style.display = q ? 'block' : 'none';
+      if (q.length < 3) { document.getElementById('ac-list').style.display = 'none'; return; }
+      acTimer = setTimeout(() => fetchAC(q), 350);
+    }
 
-    async function fetchAC(q) { /* ... */ }
+    async function fetchAC(q) {
+      try {
+        const r = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q + ' Madrid')}&format=json&limit=5&countrycodes=es&addressdetails=1`, { headers: { 'Accept-Language': 'es',
+            'User-Agent': 'TaziApp/1.0' } }
+        );
+        showAC(await r.json());
+      } catch (e) { console.warn(e) }
+    }
 
-    function showAC(res) { /* ... */ }
+    function showAC(res) {
+      const box = document.getElementById('ac-list');
+      if (!res.length) { box.style.display = 'none'; return; }
+      box.innerHTML = res.map(r => {
+        const name = r.display_name.split(',')[0];
+        const sub = r.display_name.split(',').slice(1, 3).join(',').trim();
+        return `<div class="ac-item" onclick="pickAC(${r.lat},${r.lon},'${r.display_name.replace(/'/g,"\\'")}')"><span class="ac-ic">📍</span><div><div class="ac-name">${name}</div><div class="ac-sub">${sub}</div></div></div>`;
+      }).join('');
+      box.style.display = 'block';
+    }
 
-    async function doSearch() { /* ... */ }
+    async function doSearch() {
+      document.getElementById('ac-list').style.display = 'none';
+      const q = document.getElementById('dest-input').value.trim();
+      if (!q) return;
+      try {
+        const r = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q + ' Madrid')}&format=json&limit=1&countrycodes=es`, { headers: { 'Accept-Language': 'es',
+            'User-Agent': 'TaziApp/1.0' } }
+        );
+        const d = await r.json();
+        if (d.length) pickAC(d[0].lat, d[0].lon, d[0].display_name);
+      } catch (e) { console.warn(e) }
+    }
 
-    function pickAC(lat, lon, name) { /* ... */ }
+    function pickAC(lat, lon, name) {
+      document.getElementById('dest-input').value = name.split(',')[0];
+      document.getElementById('ac-list').style.display = 'none';
+      document.getElementById('btn-clear').style.display = 'block';
+      setDest(parseFloat(lat), parseFloat(lon), name.split(',')[0]);
+    }
 
     function clearDest() {
       document.getElementById('dest-input').value = '';
@@ -299,7 +1283,6 @@
         // Ajustar vista solo si es necesario y no hay animación en curso
         const bounds = routeLayer.getBounds();
         const mapBounds = map.getBounds();
-        // Si la ruta no está completamente visible o el zoom es menor a 13, ajustamos
         if (!mapBounds.contains(bounds) || map.getZoom() < 13) {
           if (!isFlying) {
             isFlying = true;
@@ -308,7 +1291,6 @@
               duration: 0.8,
               easeLinearity: 0.25
             });
-            // Liberar el flag después de la animación
             setTimeout(() => { isFlying = false; }, 1000);
           }
         }
