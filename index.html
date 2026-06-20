@@ -129,7 +129,6 @@
     .pm-left .pm-main{font-size:2.1rem;font-weight:700;letter-spacing:-.02em;line-height:1}
     .pm-right{text-align:center;background:rgba(255,255,255,.18);border-radius:10px;padding:.4rem .7rem;min-width:72px}
     .pm-right .pm-tag{font-size:.71rem;font-weight:600}
-    .pm-right .pm-range{font-size:.67rem;opacity:.8;margin-top:.1rem}
 
     .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.6rem}
     .pg-item{background:#f8f9fa;border-radius:10px;padding:.6rem .5rem;text-align:center}
@@ -258,58 +257,49 @@ const sb=createClient(SB_URL,SB_KEY);
 const TARIFAS = {
 
   t1: {
-    id: 'T1',
-    nombre: 'Laborable diurno',
+    id: 'T1', nombre: 'Laborable diurno',
     horario: 'Lun–Vie 7:00–21:00 h',
     tipo: 'metro',
-    bandera: 2.55,
-    km: 1.40,
-    hora: 27.00,
-    min: 4.50
+    bandera: 2.55, km: 1.40, hora: 27.00, min: 4.50
   },
 
   t2: {
-    id: 'T2',
-    nombre: 'Nocturno y festivos',
+    id: 'T2', nombre: 'Nocturno y festivos',
     horario: 'Diario 21:00–7:00 h · Sáb/Dom/Fest 7:00–21:00 h',
     tipo: 'metro',
-    bandera: 3.20,
-    km: 1.60,
-    hora: 29.00,
-    min: 5.50
+    bandera: 3.20, km: 1.60, hora: 29.00, min: 5.50
   },
 
   t4: {
-    id: 'T4',
-    nombre: 'Aeropuerto → dentro M-30',
+    id: 'T4', nombre: 'Aeropuerto → dentro M-30',
     horario: '24h · 365 días · Sin suplementos',
     tipo: 'fijo',
     precio_fijo: 33.00,
-    nota: 'Tarifa fija entre cualquier terminal y cualquier punto dentro de la M-30.'
+    nota: 'Tarifa fija entre cualquier terminal (T1–T4) y cualquier punto dentro de la M-30. Sin recargo por equipaje, nº de pasajeros ni horario.'
   },
 
   t3: {
-    id: 'T3',
-    nombre: 'Aeropuerto → fuera M-30',
+    id: 'T3', nombre: 'Aeropuerto → fuera M-30',
     horario: '24h · 365 días',
     tipo: 'minimo_luego_metro',
     minimo: 22.00,
     franquicia_km: 9.0,
     km_t1: 1.40,
-    km_t2: 1.60
+    km_t2: 1.60,
+    nota: 'Mínimo 22 € cubre los primeros 9 km. Superados, el taxímetro sigue en T1 (día) o T2 (noche/fest).'
   },
 
   t7: {
-    id: 'T7',
-    nombre: 'Estaciones e IFEMA',
+    id: 'T7', nombre: 'Estaciones y IFEMA',
     horario: '24h · 365 días',
     tipo: 'salida_especial',
     salida: 8.00,
     franquicia_m: 1450,
     km: 1.40,
-    km_noche: 1.60
-  };
-
+    km_noche: 1.60,
+    nota: 'Salida desde: Atocha · Chamartín · Av. América · Méndez Álvaro · IFEMA.\n8 € incluye los primeros 1.450 m. Luego T1 (día) o T2 (noche/fest).'
+  }
+};
 
 /* ═══ ESTADO ═══ */
 let map,myMarker,accCircle,destMarker,routeLayer;
@@ -515,8 +505,24 @@ async function fetchRoute(){
 }
 
 /* ══════════════════════════════════════════
-   CÁLCULO DE PRECIO — TODAS LAS TARIFAS
+   CÁLCULO DE PRECIO — TODAS LAS TARIFAS (CORREGIDO)
 ══════════════════════════════════════════ */
+
+// ─── Determinar si es horario diurno (T1) o nocturno/festivo (T2) ───
+function esHorarioDiurno() {
+  const ahora = new Date();
+  const dia = ahora.getDay();      // 0=domingo, 6=sábado
+  const hora = ahora.getHours();
+  const minutos = ahora.getMinutes();
+  const horaMin = hora + minutos / 60;
+
+  // Festivos en España (simplificado: solo sábados y domingos)
+  const esFinDeSemana = (dia === 0 || dia === 6);
+
+  // Diurno: laborable (L-V) de 7:00 a 21:00
+  return !esFinDeSemana && (horaMin >= 7 && horaMin < 21);
+}
+
 function setTarifa(key,el){
   tarifaKey=key;
   document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
@@ -547,69 +553,75 @@ function calcPrice(){
 
   /* ── T3: AEROPUERTO → FUERA M30 ── */
   if(t.tipo==='minimo_luego_metro'){
-    let precio;
-    let desglose='';
-    if(routeKm<=t.franquicia_km){
-      precio=t.minimo;
-      desglose=`Los ${routeKm.toFixed(1)} km están dentro de los primeros ${t.franquicia_km} km → se aplica el mínimo.`;
+    const esDiurno = esHorarioDiurno();
+    const kmTarifa = esDiurno ? t.km_t1 : t.km_t2;  // 1,40 o 1,60
+    const nombreTarifa = esDiurno ? 'T1 (diurna)' : 'T2 (nocturna/festivo)';
+
+    let precio, desglose;
+    if(routeKm <= t.franquicia_km){
+      precio = t.minimo;
+      desglose = `Los ${routeKm.toFixed(1)} km están dentro de la franquicia de ${t.franquicia_km} km → se aplica el mínimo de 22,00 €.`;
     }else{
-      const kmExtra=routeKm-t.franquicia_km;
-      // T1 de día por defecto, nota indica que puede ser T2
-      const precioExtra=kmExtra*t.km_t1;
-      precio=t.minimo+precioExtra;
-      desglose=`22 € (primeros 9 km) + ${fmt(kmExtra*t.km_t1)} (${kmExtra.toFixed(1)} km extra a ${fmt(t.km_t1)}/km en T1)`;
+      const kmExtra = routeKm - t.franquicia_km;
+      const extra = kmExtra * kmTarifa;
+      precio = t.minimo + extra;
+      desglose = `22,00 € (primeros ${t.franquicia_km} km) + ${fmt(extra)} (${kmExtra.toFixed(1)} km extra a ${fmt(kmTarifa)}/km en ${nombreTarifa})`;
     }
-    const pMin=(precio*.92).toFixed(2),pMax=(precio*1.15).toFixed(2);
+
     pc.innerHTML=`
       <div class="price-meter">
         <div class="pm-left"><div class="pm-label">Precio estimado</div><div class="pm-main">${fmt(precio)}</div></div>
-        <div class="pm-right"><div class="pm-tag">T3</div><div class="pm-range">${pMin}–${pMax} €</div></div>
+        <div class="pm-right"><div class="pm-tag">T3</div></div>
       </div>
       <div class="tarifa-explain">
         <div class="te-title">📋 Cómo se calcula T3</div>
-        <div class="te-row"><span>Mínimo (primeros 9 km)</span><span class="te-val">22,00 €</span></div>
-        ${routeKm>t.franquicia_km?`<div class="te-row"><span>Km extra (${(routeKm-t.franquicia_km).toFixed(1)} km × 1,40 €)</span><span class="te-val">${fmt((routeKm-t.franquicia_km)*t.km_t1)}</span></div>`:''}
+        <div class="te-row"><span>Mínimo (primeros ${t.franquicia_km} km)</span><span class="te-val">22,00 €</span></div>
+        ${routeKm > t.franquicia_km ? `<div class="te-row"><span>Km extra (${(routeKm - t.franquicia_km).toFixed(1)} km × ${kmTarifa.toFixed(2)} €/km)</span><span class="te-val">${fmt((routeKm - t.franquicia_km) * kmTarifa)}</span></div>` : ''}
         <div class="te-row"><span>Total estimado</span><span class="te-val">${fmt(precio)}</span></div>
       </div>
-      <p class="info-note">${desglose}<br/>Si el trayecto es de noche/festivo, se aplica T2 (1,60 €/km) tras los 9 km.</p>`;
+      <p class="info-note">${desglose}<br/>El exceso se calcula con ${nombreTarifa} según la hora actual.</p>`;
     return;
   }
 
   /* ── T7: ESTACIONES Y IFEMA ── */
   if(t.tipo==='salida_especial'){
-    const franquicia_km=t.franquicia_m/1000;
+    const esDiurno = esHorarioDiurno();
+    const kmTarifa = esDiurno ? t.km : t.km_noche;  // 1,40 o 1,60
+    const nombreTarifa = esDiurno ? 'T1 (diurna)' : 'T2 (nocturna/festivo)';
+    const franquicia_km = t.franquicia_m / 1000;
+
     let precio;
-    if(routeKm<=franquicia_km){
-      precio=t.salida;
+    if(routeKm <= franquicia_km){
+      precio = t.salida;
     }else{
-      const kmExtra=routeKm-franquicia_km;
-      precio=t.salida+(kmExtra*t.km);
+      const kmExtra = routeKm - franquicia_km;
+      precio = t.salida + (kmExtra * kmTarifa);
     }
-    const kmExtra=Math.max(0,routeKm-franquicia_km);
-    const pMin=(precio*.92).toFixed(2),pMax=(precio*1.15).toFixed(2);
+    const kmExtra = Math.max(0, routeKm - franquicia_km);
+
     pc.innerHTML=`
       <div class="price-meter">
         <div class="pm-left"><div class="pm-label">Precio estimado</div><div class="pm-main">${fmt(precio)}</div></div>
-        <div class="pm-right"><div class="pm-tag">T7</div><div class="pm-range">${pMin}–${pMax} €</div></div>
+        <div class="pm-right"><div class="pm-tag">T7</div></div>
       </div>
       <div class="tarifa-explain">
         <div class="te-title">🚉 Cómo se calcula T7</div>
-        <div class="te-row"><span>Salida (incluye primeros 1.450 m)</span><span class="te-val">8,00 €</span></div>
-        ${kmExtra>0?`<div class="te-row"><span>Km extra (${kmExtra.toFixed(2)} km × 1,40 €)</span><span class="te-val">${fmt(kmExtra*t.km)}</span></div>`:'<div class="te-row"><span>Dentro de la franquicia (< 1,45 km)</span><span class="te-val">0,00 €</span></div>'}
+        <div class="te-row"><span>Salida (incluye primeros ${franquicia_km.toFixed(2)} km)</span><span class="te-val">8,00 €</span></div>
+        ${kmExtra > 0 ? `<div class="te-row"><span>Km extra (${kmExtra.toFixed(2)} km × ${kmTarifa.toFixed(2)} €/km)</span><span class="te-val">${fmt(kmExtra * kmTarifa)}</span></div>` : '<div class="te-row"><span>Dentro de la franquicia</span><span class="te-val">0,00 €</span></div>'}
         <div class="te-row"><span>Total estimado</span><span class="te-val">${fmt(precio)}</span></div>
       </div>
-      <p class="info-note">Salida desde: Atocha · Chamartín · Av. América · Méndez Álvaro · IFEMA.<br/>Tras 1.450 m el taxímetro continúa en T1 (día) o T2 (noche/fest) a 1,40–1,60 €/km.</p>`;
+      <p class="info-note">Salida desde: Atocha · Chamartín · Av. América · Méndez Álvaro · IFEMA.<br/>El exceso se calcula con ${nombreTarifa} según la hora actual.</p>`;
     return;
   }
 
   /* ── T1 / T2: TAXÍMETRO NORMAL ── */
-  let precio=t.bandera+(routeKm*t.km);
-  precio=Math.max(precio,t.min);
-  const pMin=(precio*.92).toFixed(2),pMax=(precio*1.15).toFixed(2);
+  let precio = t.bandera + (routeKm * t.km);
+  precio = Math.max(precio, t.min);
+
   pc.innerHTML=`
     <div class="price-meter">
       <div class="pm-left"><div class="pm-label">Precio estimado</div><div class="pm-main">${fmt(precio)}</div></div>
-      <div class="pm-right"><div class="pm-tag">${t.id}</div><div class="pm-range">${pMin}–${pMax} €</div></div>
+      <div class="pm-right"><div class="pm-tag">${t.id}</div></div>
     </div>
     <div class="price-grid">
       <div class="pg-item"><div class="pg-val">${fmt(t.bandera)}</div><div class="pg-key">Bajada de bandera</div></div>
@@ -621,7 +633,7 @@ function calcPrice(){
       <div class="te-row"><span>${t.horario}</span></div>
       <div class="te-row"><span>Bandera + ${routeKm.toFixed(1)} km × ${t.km.toFixed(2)} €/km</span><span class="te-val">${fmt(precio)}</span></div>
     </div>
-    <p class="info-note">Tarifas oficiales Ayuntamiento de Madrid 2026.<br/>Rango ${pMin}–${pMax} € según tráfico. Suplementos no incluidos: recogida app (máx. 5 €), maletas (0,85 €/bulto), Nochebuena/Nochevieja (7 €).</p>`;
+    <p class="info-note">Tarifas oficiales Ayuntamiento de Madrid 2026.<br/>Suplementos no incluidos: recogida app (máx. 5 €), maletas (0,85 €/bulto), Nochebuena/Nochevieja (7 €).</p>`;
 }
 
 /* ═══ GUARDAR SUPABASE ═══ */
