@@ -1,236 +1,670 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Ride System Pro</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tazi · Madrid</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;font-family:'Inter',sans-serif;overflow:hidden}
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    :root{
+      --blue:#1a73e8;--blue2:#4285f4;--red:#ea4335;--green:#34a853;
+      --yellow:#fbbc04;--text:#202124;--muted:#5f6368;--border:#e0e0e0;
+      --bg:#f5f5f5;--surface:#fff;
+      --sh:0 1px 4px rgba(0,0,0,.2),0 4px 12px rgba(0,0,0,.1);
+      --sh2:0 2px 8px rgba(0,0,0,.25),0 8px 28px rgba(0,0,0,.15);
+      --auth-bg:#0f1117;--auth-s:#1a1a2e;--auth-b:#2a2a45;
+      --teal:#3ecf8e;--teal-d:rgba(62,207,142,.12);
+      --err:#f87171;--muted2:#6b7280;
+    }
 
-<style>
-body{margin:0;font-family:system-ui;background:#0f1117;color:white;}
-#map{height:55vh;}
-#panel{height:45vh;background:#161926;padding:10px;overflow:auto;}
+    /* ═══════════════════════════════
+       AUTH
+    ═══════════════════════════════ */
+    #screen-auth{
+      min-height:100vh;display:flex;align-items:center;justify-content:center;
+      padding:1.5rem;background:var(--auth-bg);position:relative;overflow:hidden;
+    }
+    #screen-auth::before{
+      content:'';position:fixed;top:-180px;left:50%;transform:translateX(-50%);
+      width:600px;height:600px;
+      background:radial-gradient(circle,rgba(62,207,142,.15) 0%,transparent 70%);
+      pointer-events:none;animation:aupulse 4s ease-in-out infinite;
+    }
+    @keyframes aupulse{0%,100%{opacity:.6;transform:translateX(-50%) scale(1)}50%{opacity:1;transform:translateX(-50%) scale(1.06)}}
 
-input,select,button{
-  width:100%;
-  padding:10px;
-  margin:5px 0;
-  border-radius:8px;
-  border:none;
-}
+    .card{
+      position:relative;background:var(--auth-s);border:1px solid var(--auth-b);
+      border-radius:16px;padding:2.5rem 2.25rem;width:100%;max-width:400px;
+      box-shadow:0 0 0 1px rgba(62,207,142,.05),0 24px 60px rgba(0,0,0,.6);
+    }
+    .brand{display:flex;align-items:center;gap:.6rem;margin-bottom:2rem}
+    .brand-icon{width:38px;height:38px;background:var(--teal-d);border:1px solid rgba(62,207,142,.3);border-radius:10px;display:flex;align-items:center;justify-content:center}
+    .brand-icon svg{width:20px;height:20px}
+    .brand-name{font-size:1.1rem;font-weight:700;color:#e8e8f0}
+    h1{font-size:1.4rem;font-weight:600;color:#e8e8f0;margin-bottom:.3rem}
+    .subtitle{font-size:.85rem;color:var(--muted2);margin-bottom:2rem}
+    label{display:block;font-size:.75rem;font-weight:600;color:var(--muted2);margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.04em}
+    .field{margin-bottom:1rem}
+    input[type="email"],input[type="password"]{
+      width:100%;background:rgba(255,255,255,.05);border:1px solid var(--auth-b);border-radius:9px;
+      color:#e8e8f0;font-family:inherit;font-size:.9rem;padding:.7rem .9rem;outline:none;
+      transition:border-color .2s,box-shadow .2s;
+    }
+    input[type="email"]:focus,input[type="password"]:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(62,207,142,.12)}
+    input[type="email"]::placeholder,input[type="password"]::placeholder{color:#3d3d5c}
+    .btn{display:block;width:100%;padding:.75rem;margin-top:1.25rem;background:var(--teal);color:#0f1117;font-family:inherit;font-size:.9rem;font-weight:700;border:none;border-radius:9px;cursor:pointer;transition:opacity .2s,transform .1s}
+    .btn:hover{opacity:.88}.btn:active{transform:scale(.98)}.btn:disabled{opacity:.4;cursor:not-allowed}
+    .btn-ghost{background:transparent;color:#e8e8f0;border:1px solid var(--auth-b);margin-top:.6rem}
+    .btn-ghost:hover{border-color:var(--teal);color:var(--teal);opacity:1}
+    .divider{display:flex;align-items:center;gap:.75rem;color:var(--muted2);font-size:.78rem;margin:1rem 0}
+    .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--auth-b)}
+    .footer-link{text-align:center;font-size:.82rem;color:var(--muted2);margin-top:1.25rem}
+    .footer-link a{color:var(--teal);text-decoration:none;font-weight:500}
+    .amsg{font-size:.82rem;padding:.65rem .85rem;border-radius:8px;margin-bottom:.75rem;display:none}
+    .amsg.error{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);color:var(--err)}
+    .amsg.success{background:var(--teal-d);border:1px solid rgba(62,207,142,.25);color:var(--teal)}
+    .amsg.show{display:block}
+    .sp{display:inline-block;width:13px;height:13px;border:2px solid rgba(15,17,23,.3);border-top-color:#0f1117;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:5px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .view{display:none}.view.active{display:block}
 
-button{background:#3ecf8e;font-weight:bold;cursor:pointer;}
+    /* ═══════════════════════════════
+       PANTALLA MAPA
+    ═══════════════════════════════ */
+    #screen-map{display:none;position:fixed;inset:0;flex-direction:column;background:var(--bg)}
+    #screen-map.active{display:flex}
 
-.card{
-  background:#1a1a2e;
-  padding:8px;
-  margin:5px 0;
-  border-radius:8px;
-}
-.badge{
-  padding:3px 6px;
-  border-radius:6px;
-  font-size:.75rem;
-}
-.pending{background:#f59e0b;color:black;}
-.accepted{background:#3b82f6;}
-.done{background:#10b981;}
-</style>
+    /* ── MAPA 55% ── */
+    #map-wrap{position:relative;height:55vh;min-height:260px;flex-shrink:0}
+    #map{width:100%;height:100%}
+
+    /* Barra búsqueda flotante */
+    #search-bar{
+      position:absolute;top:10px;left:50%;transform:translateX(-50%);
+      z-index:500;width:calc(100% - 20px);max-width:420px;
+    }
+    .sbox{
+      background:white;border-radius:26px;box-shadow:var(--sh2);
+      display:flex;align-items:center;padding:.5rem .75rem .5rem 1rem;gap:.5rem;
+    }
+    .sbox-icon{color:var(--muted);font-size:.9rem;flex-shrink:0}
+    .sbox input{flex:1;border:none;outline:none;font-family:inherit;font-size:.9rem;color:var(--text);background:transparent}
+    .sbox input::placeholder{color:#9aa0a6}
+    .sbox-btn{background:var(--blue);color:white;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.85rem}
+    .sbox-btn:hover{background:#1557b0}
+    #ac-list{background:white;border-radius:14px;margin-top:6px;box-shadow:var(--sh2);overflow:hidden;display:none}
+    .ac-item{padding:.65rem 1rem;font-size:.84rem;color:var(--text);cursor:pointer;border-bottom:1px solid #f0f0f0;display:flex;align-items:flex-start;gap:.6rem}
+    .ac-item:last-child{border-bottom:none}
+    .ac-item:hover{background:#f8f9fa}
+    .ac-ic{color:var(--muted);font-size:.85rem;padding-top:1px;flex-shrink:0}
+    .ac-name{font-weight:500;line-height:1.3}
+    .ac-sub{font-size:.75rem;color:var(--muted)}
+
+    /* Botones mapa */
+    .map-fab{
+      position:absolute;right:10px;z-index:500;
+      background:white;border:none;border-radius:50%;
+      width:38px;height:38px;cursor:pointer;
+      box-shadow:var(--sh);display:flex;align-items:center;justify-content:center;
+      font-size:1rem;transition:box-shadow .15s;
+    }
+    .map-fab:hover{box-shadow:var(--sh2)}
+    #btn-center{bottom:56px}
+    #btn-expand{bottom:10px}
+
+    /* Topbar usuario */
+    #map-topbar{
+      position:absolute;top:10px;right:10px;z-index:500;
+    }
+    #btn-logout{
+      background:rgba(255,255,255,.92);backdrop-filter:blur(6px);
+      border:1px solid var(--border);border-radius:20px;
+      padding:.3rem .75rem;font-family:inherit;font-size:.75rem;
+      color:var(--muted);cursor:pointer;
+    }
+    #btn-logout:hover{color:var(--red);border-color:var(--red)}
+
+    /* GPS dot en mapa */
+    .my-dot{
+      width:16px;height:16px;background:var(--blue2);
+      border:2.5px solid white;border-radius:50%;
+      box-shadow:0 0 0 5px rgba(66,133,244,.2);
+      animation:glow 2s ease-in-out infinite;
+    }
+    @keyframes glow{0%,100%{box-shadow:0 0 0 5px rgba(66,133,244,.2)}50%{box-shadow:0 0 0 10px rgba(66,133,244,.0)}}
+
+    /* Mapa fullscreen */
+    #map-wrap.fullscreen{position:fixed;inset:0;height:100vh;z-index:2000}
+    #map-wrap.fullscreen+#bottom-panel{display:none}
+
+    /* ── PANEL INFERIOR ── */
+    #bottom-panel{flex:1;overflow-y:auto;background:white;position:relative}
+
+    .handle-row{display:flex;justify-content:center;padding:8px 0 4px}
+    .handle{width:36px;height:4px;background:#dadce0;border-radius:2px}
+
+    /* GPS status */
+    #gps-row{display:flex;align-items:center;gap:.5rem;padding:.5rem 1rem .75rem;font-size:.78rem;color:var(--muted)}
+    .sdot{width:8px;height:8px;border-radius:50%;background:#dadce0;flex-shrink:0}
+    .sdot.on{background:var(--green);animation:blink 1.5s ease-in-out infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+
+    /* Sección destino */
+    .section{padding:.75rem 1rem;border-bottom:1px solid #f0f0f0}
+    .section-title{font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.6rem}
+
+    /* Distancia card */
+    #dist-card{display:none}
+    .dist-row{display:flex;align-items:center;gap:.75rem;background:#f8f9fa;border-radius:12px;padding:.75rem 1rem}
+    .dist-icon{font-size:1.4rem}
+    .dist-info{flex:1}
+    .dist-km{font-size:1.1rem;font-weight:700;color:var(--text)}
+    .dist-sub{font-size:.75rem;color:var(--muted);margin-top:1px}
+
+    /* Tarifas */
+    #tarifa-section{display:none}
+    .chips{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem}
+    .chip{
+      padding:.35rem .85rem;border-radius:20px;font-size:.8rem;font-weight:500;
+      border:1.5px solid var(--border);color:var(--muted);cursor:pointer;
+      background:white;transition:all .15s;
+    }
+    .chip:hover{border-color:var(--blue);color:var(--blue)}
+    .chip.active{background:var(--blue);border-color:var(--blue);color:white}
+    .chip.t2{}.chip.t3{}
+
+    /* Precio */
+    #price-card{display:none;margin-top:.75rem}
+    .price-hero{
+      background:linear-gradient(135deg,#1a73e8 0%,#4285f4 100%);
+      border-radius:14px;padding:1.1rem 1.25rem;color:white;
+      display:flex;align-items:center;justify-content:space-between;
+      margin-bottom:.75rem;
+    }
+    .price-label{font-size:.78rem;opacity:.85;margin-bottom:.2rem}
+    .price-main{font-size:2rem;font-weight:700;letter-spacing:-.02em}
+    .price-badge{background:rgba(255,255,255,.2);border-radius:8px;padding:.3rem .6rem;font-size:.75rem;font-weight:600;text-align:center}
+    .price-range-txt{font-size:.7rem;opacity:.8;margin-top:.15rem}
+
+    .price-details{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem}
+    .pd-item{background:#f8f9fa;border-radius:10px;padding:.6rem .75rem;text-align:center}
+    .pd-val{font-size:.95rem;font-weight:700;color:var(--text)}
+    .pd-key{font-size:.68rem;color:var(--muted);margin-top:2px}
+
+    .info-note{font-size:.72rem;color:var(--muted);text-align:center;margin-top:.75rem;line-height:1.5;padding:0 .5rem}
+
+    /* No dest */
+    #no-dest{text-align:center;padding:1.5rem 1rem;color:var(--muted);font-size:.85rem}
+    #no-dest .nd-icon{font-size:2rem;margin-bottom:.5rem}
+
+    /* Coords mini */
+    #coords-mini{padding:.4rem 1rem;font-size:.72rem;color:var(--muted);font-family:'Courier New',monospace;background:#fafafa;border-bottom:1px solid #f0f0f0}
+
+    /* Leaflet override — estilo Google Maps */
+    .leaflet-tile-pane{filter:saturate(1.1) brightness(1.02)}
+    .leaflet-control-zoom{border-radius:8px!important;overflow:hidden;box-shadow:var(--sh)!important;border:none!important}
+    .leaflet-control-zoom a{color:var(--muted)!important;font-weight:600!important}
+    .leaflet-popup-content-wrapper{border-radius:12px!important;box-shadow:var(--sh2)!important}
+    .leaflet-popup-tip{display:none}
+
+    /* Route line */
+    .route-line{stroke-dasharray:10 6}
+  </style>
 </head>
-
 <body>
 
-<div id="map"></div>
+<!-- ════════════════════════════════
+     PANTALLA AUTH
+════════════════════════════════ -->
+<div id="screen-auth">
+<div class="card">
+  <div class="brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M13.5 3L4.5 14h8.25L10.5 21l9-11h-8.25L13.5 3Z" fill="#3ecf8e"/></svg>
+    </div>
+    <span class="brand-name">Tazi</span>
+  </div>
+  <div id="amsg" class="amsg"></div>
 
-<div id="panel">
+  <div id="view-login" class="view active">
+    <h1>Bienvenido</h1>
+    <p class="subtitle">Tu taxi en Madrid</p>
+    <div class="field">
+      <label for="le">Correo</label>
+      <input id="le" type="email" placeholder="tu@correo.com" autocomplete="email"/>
+    </div>
+    <div class="field">
+      <label for="lp">Contraseña</label>
+      <input id="lp" type="password" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <button id="btn-login" class="btn" onclick="doLogin()">Iniciar sesión</button>
+    <div class="divider">o</div>
+    <button class="btn btn-ghost" onclick="doMagic()">Enviar enlace mágico</button>
+    <p class="footer-link">¿Sin cuenta? <a href="#" onclick="sw('register')">Regístrate</a></p>
+  </div>
 
-<select id="role">
-  <option value="client">Cliente</option>
-  <option value="driver">Conductor</option>
-</select>
-
-<button onclick="setRole()">Entrar</button>
-
-<input id="dest" placeholder="Destino"/>
-
-<button onclick="createTrip()">Solicitar viaje</button>
-
-<h4>Viajes</h4>
-<div id="trips"></div>
-
+  <div id="view-register" class="view">
+    <h1>Crear cuenta</h1>
+    <p class="subtitle">Empieza a usar Tazi gratis</p>
+    <div class="field">
+      <label for="re">Correo</label>
+      <input id="re" type="email" placeholder="tu@correo.com" autocomplete="email"/>
+    </div>
+    <div class="field">
+      <label for="rp">Contraseña</label>
+      <input id="rp" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"/>
+    </div>
+    <button id="btn-reg" class="btn" onclick="doRegister()">Crear cuenta</button>
+    <p class="footer-link">¿Ya tienes cuenta? <a href="#" onclick="sw('login')">Inicia sesión</a></p>
+  </div>
+</div>
 </div>
 
+<!-- ════════════════════════════════
+     PANTALLA MAPA
+════════════════════════════════ -->
+<div id="screen-map">
+
+  <!-- MAPA -->
+  <div id="map-wrap">
+    <div id="map"></div>
+
+    <!-- Buscador flotante -->
+    <div id="search-bar">
+      <div class="sbox">
+        <span class="sbox-icon">🔍</span>
+        <input id="dest-input" type="text" placeholder="¿A dónde vas?" oninput="onSearchInput()" onkeydown="if(event.key==='Enter')doSearch()"/>
+        <button class="sbox-btn" onclick="doSearch()">→</button>
+      </div>
+      <div id="ac-list"></div>
+    </div>
+
+    <!-- Logout -->
+    <div id="map-topbar">
+      <button id="btn-logout" onclick="doLogout()">✕ Salir</button>
+    </div>
+
+    <!-- FABs -->
+    <button class="map-fab" id="btn-center" onclick="centerMap()" title="Mi ubicación">◎</button>
+    <button class="map-fab" id="btn-expand" onclick="toggleFull()" title="Pantalla completa">⛶</button>
+  </div>
+
+  <!-- PANEL INFERIOR -->
+  <div id="bottom-panel">
+    <div class="handle-row"><div class="handle"></div></div>
+
+    <!-- GPS status + coords -->
+    <div id="gps-row">
+      <div class="sdot" id="sdot"></div>
+      <span id="stext">Conectando GPS…</span>
+    </div>
+    <div id="coords-mini" style="display:none"></div>
+
+    <!-- Sin destino -->
+    <div id="no-dest" class="section">
+      <div class="nd-icon">🗺️</div>
+      Busca un destino para calcular<br/>la distancia y el precio del taxi
+    </div>
+
+    <!-- Con destino -->
+    <div id="dist-card" class="section">
+      <div class="section-title">Distancia estimada</div>
+      <div class="dist-row">
+        <div class="dist-icon">📏</div>
+        <div class="dist-info">
+          <div class="dist-km" id="dist-km">—</div>
+          <div class="dist-sub" id="dist-sub">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tarifa-section" class="section">
+      <div class="section-title">Tarifa</div>
+      <div class="chips">
+        <button class="chip active" onclick="setTarifa(1,this)">T1 · Día</button>
+        <button class="chip" onclick="setTarifa(2,this)">T2 · Noche</button>
+        <button class="chip" onclick="setTarifa(3,this)">T3 · Extra</button>
+      </div>
+
+      <div id="price-card">
+        <div class="price-hero">
+          <div>
+            <div class="price-label">Precio estimado</div>
+            <div class="price-main" id="price-main">—</div>
+          </div>
+          <div class="price-badge">
+            <div id="tarifa-name">T1</div>
+            <div class="price-range-txt" id="price-range">—</div>
+          </div>
+        </div>
+        <div class="price-details">
+          <div class="pd-item"><div class="pd-val" id="pd-band">—</div><div class="pd-key">Bajada bandera</div></div>
+          <div class="pd-item"><div class="pd-val" id="pd-km">—</div><div class="pd-key">€/km</div></div>
+          <div class="pd-item"><div class="pd-val" id="pd-min">—</div><div class="pd-key">Mínimo</div></div>
+        </div>
+        <p class="info-note">Tarifa oficial EMT Madrid 2024. El precio final puede variar por tráfico, paradas o suplementos.</p>
+      </div>
+    </div>
+
+  </div><!-- /bottom-panel -->
+</div><!-- /screen-map -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+/* ─── CONFIG ─── */
+const SB_URL  = 'https://ejbvfirfodfktekgpwkm.supabase.co';
+const SB_KEY  = 'sb_publishable_ZNwpPu1uqxZfKWOU6FDgbQ_0sLhGrXt';
+const {createClient}=supabase;
+const sb=createClient(SB_URL,SB_KEY);
 
-const sb = supabase.createClient(
-  "https://ejbvfirfodfktekgpwkm.supabase.co",
-  "TU_ANON_KEY"
-);
+/* ─── TARIFAS TAXI MADRID 2024 ─── */
+const T={
+  1:{nombre:'T1 · Día',    bandera:2.40, km:1.10, min:4.00},
+  2:{nombre:'T2 · Noche',  bandera:2.90, km:1.30, min:5.00},
+  3:{nombre:'T3 · Extra',  bandera:3.00, km:1.45, min:5.50}
+};
 
-let user, role;
+/* ─── ESTADO ─── */
+let map,myMarker,accCircle,destMarker,routeLine;
+let myPos=null,destPos=null;
+let watchId=null,currentUser=null,lastSaved=0;
+let tarifa=1,fullscreen=false;
+const SAVE_MS=10000;
 
-/* ================= MAPA ================= */
-const map = L.map("map").setView([40.4168,-3.7038],13);
+/* ════════════════════════════
+   AUTH UI
+════════════════════════════ */
+function showMsg(t,type='error'){const e=document.getElementById('amsg');e.textContent=t;e.className='amsg '+type+' show'}
+function clearMsg(){const e=document.getElementById('amsg');e.className='amsg';e.textContent=''}
+function sw(n){clearMsg();document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById('view-'+n).classList.add('active')}
+function ld(id,on,lbl){const b=document.getElementById(id);b.disabled=on;b.innerHTML=on?`<span class="sp"></span>Cargando…`:lbl}
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
-.addTo(map);
+async function doLogin(){
+  clearMsg();
+  const e=document.getElementById('le').value.trim();
+  const p=document.getElementById('lp').value;
+  if(!e||!p){showMsg('Completa todos los campos.');return}
+  ld('btn-login',true,'Iniciar sesión');
+  const{error}=await sb.auth.signInWithPassword({email:e,password:p});
+  ld('btn-login',false,'Iniciar sesión');
+  if(error)showMsg(error.message);
+}
 
-/* ================= LOGIN ANON ================= */
+async function doRegister(){
+  clearMsg();
+  const e=document.getElementById('re').value.trim();
+  const p=document.getElementById('rp').value;
+  if(!e||!p){showMsg('Completa todos los campos.');return}
+  if(p.length<6){showMsg('Mínimo 6 caracteres.');return}
+  ld('btn-reg',true,'Crear cuenta');
+  const{error}=await sb.auth.signUp({email:e,password:p});
+  ld('btn-reg',false,'Crear cuenta');
+  if(error)showMsg(error.message);
+  else showMsg('¡Cuenta creada! Revisa tu correo.','success');
+}
+
+async function doMagic(){
+  clearMsg();
+  const e=document.getElementById('le').value.trim();
+  if(!e){showMsg('Escribe tu correo primero.');return}
+  const{error}=await sb.auth.signInWithOtp({email:e});
+  if(error)showMsg(error.message);
+  else showMsg('Enlace enviado — revisa tu bandeja.','success');
+}
+
+async function doLogout(){
+  stopGPS();
+  await sb.auth.signOut();
+}
+
+/* ════════════════════════════
+   SESIÓN
+════════════════════════════ */
 (async()=>{
-  const {data} = await sb.auth.signInAnonymously();
-  user = data.user;
-  listenTrips();
-  listenDrivers();
+  const{data:{session}}=await sb.auth.getSession();
+  if(session?.user)onLogin(session.user);
 })();
 
-/* ================= ROLE ================= */
-async function setRole(){
-  role = role.value;
+sb.auth.onAuthStateChange((_,session)=>{
+  if(session?.user)onLogin(session.user);
+  else onLogout();
+});
 
-  await sb.from("profiles").upsert({
-    id:user.id,
-    role
+function onLogin(user){
+  currentUser=user;
+  document.getElementById('screen-auth').style.display='none';
+  document.getElementById('screen-map').classList.add('active');
+  initMap();
+  startGPS();
+}
+function onLogout(){
+  currentUser=null;
+  document.getElementById('screen-map').classList.remove('active');
+  document.getElementById('screen-auth').style.display='';
+  if(map){map.remove();map=null;myMarker=null;accCircle=null;destMarker=null;routeLine=null;}
+}
+
+/* ════════════════════════════
+   MAPA
+════════════════════════════ */
+function initMap(){
+  if(map)return;
+  map=L.map('map',{center:[40.4168,-3.7038],zoom:13,zoomControl:true});
+
+  /* Tiles estilo claro similar a Google Maps */
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
+    attribution:'© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/">CARTO</a>',
+    maxZoom:19,subdomains:'abcd'
+  }).addTo(map);
+
+  map.on('click',e=>{
+    document.getElementById('ac-list').style.display='none';
   });
-
-  if(role === "driver") startDriverGPS();
 }
 
-/* ================= GPS DRIVER ================= */
-function startDriverGPS(){
-
-  navigator.geolocation.watchPosition(async pos=>{
-
-    await sb.from("locations").upsert({
-      user_id:user.id,
-      role:"driver",
-      lat:pos.coords.latitude,
-      lng:pos.coords.longitude,
-      updated_at:new Date()
-    });
-
-  });
-
+function centerMap(){
+  if(map&&myPos)map.setView([myPos.lat,myPos.lng],16,{animate:true});
 }
 
-/* ================= MATCHING ================= */
-function distance(a,b){
-  return Math.abs(a.lat-b.lat)+Math.abs(a.lng-b.lng);
+function toggleFull(){
+  fullscreen=!fullscreen;
+  document.getElementById('map-wrap').classList.toggle('fullscreen',fullscreen);
+  document.getElementById('btn-expand').textContent=fullscreen?'✕':'⛶';
+  setTimeout(()=>map&&map.invalidateSize(),250);
 }
 
-/* ================= CREAR VIAJE ================= */
-async function createTrip(){
+/* ════════════════════════════
+   GPS
+════════════════════════════ */
+function startGPS(){
+  if(!navigator.geolocation){setSt('GPS no disponible',false);return}
+  setSt('Conectando GPS…',false);
+  watchId=navigator.geolocation.watchPosition(onPos,onGPSErr,{enableHighAccuracy:true,maximumAge:5000,timeout:15000});
+}
+function stopGPS(){if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}}
 
-  if(role !== "client") return alert("Solo clientes");
+function onPos(pos){
+  const{latitude:lat,longitude:lng,accuracy:acc}=pos.coords;
+  myPos={lat,lng};
+  setSt('GPS activo ·  ±'+Math.round(acc)+' m',true);
 
-  const dest = dest.value;
+  const cm=document.getElementById('coords-mini');
+  cm.style.display='block';
+  cm.textContent='📍 '+lat.toFixed(6)+', '+lng.toFixed(6);
 
-  const {data:drivers} = await sb
-    .from("locations")
-    .select("*")
-    .eq("role","driver");
+  const ll=[lat,lng];
+  const icon=L.divIcon({className:'',html:'<div class="my-dot"></div>',iconSize:[16,16],iconAnchor:[8,8]});
 
-  if(!drivers.length) return alert("No drivers");
+  if(!myMarker){
+    myMarker=L.marker(ll,{icon,zIndexOffset:1000}).addTo(map)
+      .bindPopup('<b>Tu ubicación</b>',{closeButton:false});
+    accCircle=L.circle(ll,{radius:acc,color:'#4285f4',fillColor:'#4285f4',fillOpacity:.08,weight:1}).addTo(map);
+    map.setView(ll,15);
+  }else{
+    myMarker.setLatLng(ll);
+    accCircle.setLatLng(ll);accCircle.setRadius(acc);
+  }
 
-  const client = {lat:40.4168,lng:-3.7038};
+  if(destPos)drawRoute();
 
-  let best = drivers[0];
-
-  drivers.forEach(d=>{
-    if(distance(d,client) < distance(best,client)){
-      best = d;
-    }
-  });
-
-  await sb.from("trips").insert({
-    client_id:user.id,
-    driver_id:best.user_id,
-    destination:dest,
-    status:"pending"
-  });
-
+  const now=Date.now();
+  if(now-lastSaved>=SAVE_MS){saveLocation(lat,lng,acc);lastSaved=now;}
 }
 
-/* ================= VIAJES ================= */
-function listenTrips(){
-
-  sb.channel("trips")
-  .on("postgres_changes",
-    {event:"*",schema:"public",table:"trips"},
-    payload=>renderTrips(payload.new)
-  )
-  .subscribe();
-
-  loadTrips();
+function onGPSErr(e){
+  const m={1:'Permiso de GPS denegado',2:'Ubicación no disponible',3:'Tiempo agotado'};
+  setSt(m[e.code]||'Error GPS',false);
 }
 
-async function loadTrips(){
-
-  const {data} = await sb.from("trips").select("*");
-
-  data.forEach(renderTrips);
+function setSt(txt,on){
+  document.getElementById('stext').textContent=txt;
+  document.getElementById('sdot').className='sdot'+(on?' on':'');
 }
 
-/* ================= UI VIAJES ================= */
-function renderTrips(t){
-
-  if(!t) return;
-
-  let badge =
-    t.status==="pending" ? "pending" :
-    t.status==="accepted" ? "accepted" : "done";
-
-  trips.innerHTML += `
-    <div class="card">
-      🚕 ${t.destination}<br>
-      👤 ${t.client_id}<br>
-      🚖 ${t.driver_id || "esperando"}<br>
-      <span class="badge ${badge}">${t.status}</span><br>
-
-      ${role==="driver" && t.status==="pending" ?
-        `<button onclick="acceptTrip('${t.id}')">Aceptar</button>` : ""}
-    </div>
-  `;
+/* ════════════════════════════
+   BÚSQUEDA
+════════════════════════════ */
+let acTimer=null;
+function onSearchInput(){
+  clearTimeout(acTimer);
+  const q=document.getElementById('dest-input').value.trim();
+  if(q.length<3){document.getElementById('ac-list').style.display='none';return}
+  acTimer=setTimeout(()=>fetchAC(q),350);
 }
 
-/* ================= ACEPTAR VIAJE ================= */
-async function acceptTrip(id){
-
-  await sb.from("trips")
-    .update({status:"accepted"})
-    .eq("id",id);
-
+async function fetchAC(q){
+  try{
+    const base=myPos?`&viewbox=${myPos.lng-.1},${myPos.lat+.1},${myPos.lng+.1},${myPos.lat-.1}&bounded=0`:'';
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+' Madrid')}&format=json&limit=5&countrycodes=es&addressdetails=1${base}`,{headers:{'Accept-Language':'es','User-Agent':'TaziApp/1.0'}});
+    const d=await r.json();showAC(d);
+  }catch(e){console.warn(e)}
 }
 
-/* ================= DRIVERS LIVE ================= */
-function listenDrivers(){
-
-  sb.channel("drivers")
-  .on("postgres_changes",
-    {event:"*",schema:"public",table:"locations"},
-    loadDrivers
-  )
-  .subscribe();
+function showAC(res){
+  const box=document.getElementById('ac-list');
+  if(!res.length){box.style.display='none';return}
+  box.innerHTML=res.map(r=>{
+    const name=r.display_name.split(',')[0];
+    const sub=r.display_name.split(',').slice(1,3).join(',').trim();
+    return`<div class="ac-item" onclick="pickAC(${r.lat},${r.lon},'${r.display_name.replace(/'/g,'')}')">
+      <span class="ac-ic">📍</span>
+      <div><div class="ac-name">${name}</div><div class="ac-sub">${sub}</div></div>
+    </div>`;
+  }).join('');
+  box.style.display='block';
 }
 
-async function loadDrivers(){
-
-  const {data} = await sb
-    .from("locations")
-    .select("*")
-    .eq("role","driver");
-
-  data.forEach(d=>{
-    L.marker([d.lat,d.lng])
-      .addTo(map)
-      .bindPopup("🚖 driver");
-  });
-
+async function doSearch(){
+  document.getElementById('ac-list').style.display='none';
+  const q=document.getElementById('dest-input').value.trim();
+  if(!q)return;
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+' Madrid')}&format=json&limit=1&countrycodes=es`,{headers:{'Accept-Language':'es','User-Agent':'TaziApp/1.0'}});
+    const d=await r.json();
+    if(d.length)pickAC(d[0].lat,d[0].lon,d[0].display_name);
+  }catch(e){console.warn(e)}
 }
 
+function pickAC(lat,lon,name){
+  document.getElementById('dest-input').value=name.split(',')[0];
+  document.getElementById('ac-list').style.display='none';
+  setDest(parseFloat(lat),parseFloat(lon),name);
+}
+
+function setDest(lat,lng,name){
+  destPos={lat,lng};
+
+  /* Marcador destino rojo tipo Google Maps */
+  const html=`<svg width="28" height="38" viewBox="0 0 28 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 24 14 24S28 23.333 28 14C28 6.268 21.732 0 14 0z" fill="#ea4335"/>
+    <circle cx="14" cy="14" r="6" fill="white"/>
+  </svg>`;
+  const icon=L.divIcon({className:'',html,iconSize:[28,38],iconAnchor:[14,38]});
+
+  if(destMarker)destMarker.setLatLng([lat,lng]).setIcon(icon);
+  else destMarker=L.marker([lat,lng],{icon}).addTo(map);
+  destMarker.bindPopup(`<b>${name.split(',')[0]}</b>`).openPopup();
+
+  drawRoute();
+  calcPrice();
+
+  if(myPos)map.fitBounds([[myPos.lat,myPos.lng],[lat,lng]],{padding:[70,70],animate:true});
+  else map.setView([lat,lng],14);
+}
+
+/* ════════════════════════════
+   RUTA
+════════════════════════════ */
+function drawRoute(){
+  if(!myPos||!destPos)return;
+  if(routeLine)map.removeLayer(routeLine);
+  routeLine=L.polyline([[myPos.lat,myPos.lng],[destPos.lat,destPos.lng]],
+    {color:'#1a73e8',weight:4,opacity:.75,dashArray:'10 7',className:'route-line'}).addTo(map);
+}
+
+function haversine(la1,lo1,la2,lo2){
+  const R=6371,d2r=Math.PI/180;
+  const dlat=(la2-la1)*d2r,dlon=(lo2-lo1)*d2r;
+  const a=Math.sin(dlat/2)**2+Math.cos(la1*d2r)*Math.cos(la2*d2r)*Math.sin(dlon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+/* ════════════════════════════
+   PRECIO TAXI
+════════════════════════════ */
+function setTarifa(n,el){
+  tarifa=n;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  if(destPos&&myPos)calcPrice();
+}
+
+function calcPrice(){
+  if(!myPos||!destPos)return;
+
+  const t=T[tarifa];
+  const dLine=haversine(myPos.lat,myPos.lng,destPos.lat,destPos.lng);
+  const dRuta=dLine*1.35; // factor urbano Madrid
+
+  let precio=t.bandera+(dRuta*t.km);
+  precio=Math.max(precio,t.min);
+  const pMin=(precio*.9).toFixed(2);
+  const pMax=(precio*1.15).toFixed(2);
+
+  document.getElementById('no-dest').style.display='none';
+  document.getElementById('dist-card').style.display='block';
+  document.getElementById('tarifa-section').style.display='block';
+  document.getElementById('price-card').style.display='block';
+
+  document.getElementById('dist-km').textContent=dLine.toFixed(1)+' km en línea recta';
+  document.getElementById('dist-sub').textContent='Ruta estimada: ~'+dRuta.toFixed(1)+' km por carretera';
+  document.getElementById('tarifa-name').textContent=t.nombre;
+  document.getElementById('price-main').textContent=precio.toFixed(2)+' €';
+  document.getElementById('price-range').textContent=pMin+' – '+pMax+' €';
+  document.getElementById('pd-band').textContent=t.bandera.toFixed(2)+' €';
+  document.getElementById('pd-km').textContent=t.km.toFixed(2)+' €';
+  document.getElementById('pd-min').textContent=t.min.toFixed(2)+' €';
+}
+
+/* ════════════════════════════
+   GUARDAR SUPABASE
+════════════════════════════ */
+async function saveLocation(lat,lng,acc){
+  if(!currentUser)return;
+  try{
+    await sb.from('locations').insert({user_id:currentUser.id,latitude:lat,longitude:lng,accuracy:acc,recorded_at:new Date().toISOString()});
+  }catch(e){console.warn('save:',e.message)}
+}
+
+/* Cerrar autocomplete al tocar fuera */
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#search-bar'))document.getElementById('ac-list').style.display='none';
+});
 </script>
-
 </body>
 </html>
