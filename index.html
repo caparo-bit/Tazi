@@ -5,11 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Tazi · Madrid</title>
 
-  <!-- Manifest para PWA -->
+  <!-- Manifest PWA -->
   <link rel="manifest" href="manifest.json">
 
-  <!-- Iconos para la instalación (opcional pero recomendado) -->
+  <!-- Iconos para la instalación -->
   <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tazi">
   <meta name="theme-color" content="#0f1117">
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -172,6 +175,98 @@
     .leaflet-popup-tip{display:none}
     .leaflet-popup-content{margin:.65rem .9rem!important;font-size:.85rem!important}
 
+    /* BANNER DE INSTALACIÓN PWA (estilo Taxi OCR) */
+    #install-banner {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 16px;
+      right: 16px;
+      background: linear-gradient(135deg, #0c0e12 0%, #12151b 100%);
+      border: 1px solid rgba(62, 207, 142, 0.4);
+      border-radius: 16px;
+      padding: 14px 16px;
+      z-index: 999;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(62, 207, 142, 0.1);
+      animation: slideUpBanner 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      backdrop-filter: blur(8px);
+    }
+    @media(min-width: 821px){
+      #install-banner {
+        bottom: 24px;
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        width: 380px;
+      }
+    }
+    @keyframes slideUpBanner {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .install-banner-inner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .install-icon {
+      width: 48px;
+      height: 48px;
+      min-width: 48px;
+      background: #000;
+      border-radius: 12px;
+      border: 1px solid rgba(62, 207, 142, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      background: var(--auth-s);
+    }
+    .install-text {
+      flex: 1;
+    }
+    .install-text strong {
+      display: block;
+      font-size: 14px;
+      color: var(--text);
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .install-text span {
+      font-size: 11px;
+      color: var(--muted2);
+    }
+    .install-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .btn-install-banner {
+      background: var(--teal);
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(62, 207, 142, 0.3);
+      transition: all 0.2s;
+    }
+    .btn-install-banner:hover { filter: brightness(1.08); }
+    .btn-install-banner:active { transform: scale(0.96); }
+    .btn-dismiss {
+      background: transparent;
+      color: var(--muted2);
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+    }
+
     /* Modal de instrucciones para iOS */
     .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:9999;display:none;align-items:center;justify-content:center;padding:1.5rem}
     .modal-overlay.show{display:flex}
@@ -181,6 +276,11 @@
     .modal-box ol{padding-left:1.2rem;font-size:.82rem;color:#ccc;margin-bottom:1.5rem}
     .modal-box ol li{margin-bottom:.5rem}
     .modal-box .btn{background:var(--teal);color:#0f1117;border:none;padding:.7rem;border-radius:9px;font-weight:600;cursor:pointer;width:100%}
+
+    /* Ajuste para que el banner no tape el botón de login en móvil */
+    @media(max-width: 600px){
+      #install-banner { bottom: 80px; }
+    }
   </style>
 </head>
 <body>
@@ -202,7 +302,7 @@
     <div class="divider">o</div>
     <button class="btn btn-ghost" onclick="doMagic()">Enviar enlace mágico</button>
     <button class="btn btn-demo" onclick="entrarDemo()">🚕 Entrar sin cuenta (demo)</button>
-    <!-- BOTÓN DE INSTALACIÓN: siempre visible (excepto si ya está instalado) -->
+    <!-- Botón de instalación siempre visible (excepto si ya está instalado) -->
     <button class="btn btn-install" id="btn-install" onclick="instalarApp()">📲 Instalar Tazi</button>
     <p class="footer-link">¿Sin cuenta? <a href="#" onclick="sw('register')">Regístrate</a></p>
   </div>
@@ -217,7 +317,7 @@
 </div>
 </div>
 
-<!-- Modal de instrucciones -->
+<!-- Modal de instrucciones para instalación manual -->
 <div class="modal-overlay" id="install-modal">
   <div class="modal-box">
     <h2>📲 Instalar Tazi</h2>
@@ -294,6 +394,21 @@
         <button class="chip" data-key="t7" onclick="setTarifa('t7',this)">🚉 Estaciones/IFEMA</button>
       </div>
       <div id="price-card"></div>
+    </div>
+  </div>
+</div>
+
+<!-- BANNER DE INSTALACIÓN PWA (estilo Taxi OCR) -->
+<div id="install-banner">
+  <div class="install-banner-inner">
+    <div class="install-icon">🚕</div>
+    <div class="install-text">
+      <strong>Tazi</strong>
+      <span>Instalar como app en tu móvil</span>
+    </div>
+    <div class="install-actions">
+      <button class="btn-install-banner" onclick="instalarApp()">Instalar</button>
+      <button class="btn-dismiss" onclick="dismissInstall()" title="Cerrar">✕</button>
     </div>
   </div>
 </div>
@@ -381,28 +496,46 @@ const SAVE_MS = 10000;
 // ═══════════════════════════════════════════
 let deferredPrompt = null;
 const btnInstall = document.getElementById('btn-install');
+const banner = document.getElementById('install-banner');
 const modal = document.getElementById('install-modal');
 
-// Si ya está instalada (modo standalone), ocultamos el botón
-if (window.matchMedia('(display-mode: standalone)').matches) {
+// Si ya está instalada (modo standalone), ocultamos todo
+if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
   btnInstall.style.display = 'none';
+  banner.style.display = 'none';
 } else {
-  // Siempre visible si no está instalada
+  // Mostrar botón en login
   btnInstall.style.display = 'flex';
+  // El banner se mostrará al dispararse beforeinstallprompt o tras un tiempo
 }
 
-// Escuchar el evento de instalación (solo navegadores compatibles)
+// Escuchar evento de instalación (Chrome, Edge, etc.)
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  // Aseguramos que el botón esté visible
+  // Mostrar banner (si no fue descartado)
+  const dismissed = sessionStorage.getItem('install_dismissed');
+  if (!dismissed) {
+    banner.style.display = 'block';
+  }
   btnInstall.style.display = 'flex';
 });
 
+// Si la app se instala
 window.addEventListener('appinstalled', () => {
+  deferredPrompt = null;
   btnInstall.style.display = 'none';
-  console.log('App instalada correctamente');
+  banner.style.display = 'none';
+  toast('¡Tazi instalada correctamente! 🎉', 'success');
 });
+
+// Si tras 3s no hay evento beforeinstallprompt, mostrar mensaje de ayuda en el botón (ya visible)
+setTimeout(() => {
+  if (!deferredPrompt && !window.matchMedia('(display-mode: standalone)').matches) {
+    // El botón ya está visible, pero podemos añadir un tooltip o cambiar el texto
+    // No hacemos nada, el botón ya tiene el comportamiento de abrir modal.
+  }
+}, 3000);
 
 function instalarApp() {
   if (deferredPrompt) {
@@ -412,6 +545,7 @@ function instalarApp() {
       if (choice.outcome === 'accepted') {
         console.log('Usuario aceptó la instalación');
         btnInstall.style.display = 'none';
+        banner.style.display = 'none';
       } else {
         console.log('Usuario rechazó la instalación');
       }
@@ -425,6 +559,30 @@ function instalarApp() {
 
 function cerrarModal() {
   modal.classList.remove('show');
+}
+
+function dismissInstall() {
+  banner.style.display = 'none';
+  sessionStorage.setItem('install_dismissed', '1');
+}
+
+// Toast simple
+function toast(msg, type='success') {
+  const t = document.createElement('div');
+  t.style.cssText = `
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 40px; padding: 12px 28px;
+    font-size: 13px; font-family: 'Inter', sans-serif; font-weight: 500;
+    z-index: 2100; color: ${type === 'success' ? '#34d399' : '#fb7185'};
+    box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+    transition: all 0.3s; opacity: 0; pointer-events: none;
+    background: var(--auth-s);
+  `;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(() => { t.style.opacity = '1'; });
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 2800);
 }
 
 // ═══════════════════════════════════════════
