@@ -277,15 +277,18 @@ const TARIFAS = {
 // ═══════════════════════════════════════════
 // ESTADO GLOBAL
 // ═══════════════════════════════════════════
-let map, myMarker, accCircle, destMarker, routeLayer; // routeLayer será L.polyline
+let map, myMarker, accCircle, destMarker, routeLayer;
 let myPos = null, destPos = null, routeKm = null, routeDurMin = null;
 let watchId = null, currentUser = null, lastSaved = 0;
 let tarifaKey = 't1', fullscreen = false;
 let fetchingRoute = false, routeFetchTimeout = null, lastRouteKm = null, isFlying = false;
+// FIX 1: guardamos la última posición para medir el desplazamiento
+let lastMyPos = null;
+const GPS_THRESHOLD_M = 15; // metros mínimos para recalcular
 const SAVE_MS = 10000;
 
 // ═══════════════════════════════════════════
-// AUTH UI (con soporte para demo)
+// AUTH UI
 // ═══════════════════════════════════════════
 function showMsg(t, tp='error'){ const e=document.getElementById('amsg'); e.textContent=t; e.className='amsg '+tp+' show'; }
 function clearMsg(){ const e=document.getElementById('amsg'); e.className='amsg'; e.textContent=''; }
@@ -325,7 +328,6 @@ async function doMagic(){
 }
 
 function entrarDemo(){
-  // Usuario ficticio para modo demo
   currentUser = { id: 'demo-user', email: 'demo@tazi.es' };
   document.getElementById('screen-auth').style.display = 'none';
   document.getElementById('screen-map').classList.add('active');
@@ -338,7 +340,6 @@ async function doLogout(){
   if(supabaseReady && currentUser && currentUser.id !== 'demo-user') {
     await sb.auth.signOut();
   } else {
-    // Modo demo
     currentUser = null;
     document.getElementById('screen-map').classList.remove('active');
     document.getElementById('screen-auth').style.display = '';
@@ -347,7 +348,7 @@ async function doLogout(){
 }
 
 // ═══════════════════════════════════════════
-// SESIÓN (solo si Supabase está disponible)
+// SESIÓN
 // ═══════════════════════════════════════════
 if(supabaseReady){
   (async()=>{
@@ -400,6 +401,16 @@ function toggleFull(){
 // ═══════════════════════════════════════════
 // GPS
 // ═══════════════════════════════════════════
+
+// FIX 1: distancia en metros entre dos coordenadas (Haversine simplificado)
+function distMetros(a, b){
+  const R = 6371000;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLng = (b.lng - a.lng) * Math.PI / 180;
+  const sin2 = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.asin(Math.sqrt(sin2));
+}
+
 function startGPS(){
   if(!navigator.geolocation){ setSt('GPS no disponible', false); return; }
   setSt('Conectando GPS…', false);
@@ -409,13 +420,16 @@ function stopGPS(){ if(watchId!=null){ navigator.geolocation.clearWatch(watchId)
 
 function onPos(pos){
   const { latitude:lat, longitude:lng, accuracy:acc } = pos.coords;
-  myPos = { lat, lng };
+  const newPos = { lat, lng };
+
   setSt('GPS activo · ±'+Math.round(acc)+' m', true);
   const cm=document.getElementById('coords-mini');
   cm.style.display='block'; cm.textContent='📍 '+lat.toFixed(6)+', '+lng.toFixed(6);
+
   const ll=[lat,lng];
   const icon = L.divIcon({ className:'', html:'<div class="my-dot"></div>', iconSize:[16,16], iconAnchor:[8,8] });
   if(!myMarker){
+    myPos = newPos;
     myMarker = L.marker(ll, { icon, zIndexOffset:1000 }).addTo(map).bindPopup('<b>Tu ubicación</b>', { closeButton:false });
     accCircle = L.circle(ll, { radius:acc, color:'#4285f4', fillColor:'#4285f4', fillOpacity:.08, weight:1 }).addTo(map);
     map.setView(ll, 15);
@@ -424,7 +438,15 @@ function onPos(pos){
     accCircle.setLatLng(ll);
     accCircle.setRadius(acc);
   }
-  if(destPos) scheduleFetchRoute();
+
+  // FIX 1: solo recalcular ruta si nos movimos más de GPS_THRESHOLD_M
+  const moved = !lastMyPos || distMetros(lastMyPos, newPos) >= GPS_THRESHOLD_M;
+  myPos = newPos;
+  if(moved){
+    lastMyPos = newPos;
+    if(destPos) scheduleFetchRoute();
+  }
+
   const now = Date.now();
   if(now - lastSaved >= SAVE_MS && currentUser && currentUser.id !== 'demo-user'){
     saveLocation(lat, lng, acc);
@@ -494,7 +516,7 @@ function clearDest(){
 }
 
 // ═══════════════════════════════════════════
-// DESTINO (sin fitBounds redundante)
+// DESTINO
 // ═══════════════════════════════════════════
 function setDest(lat, lng, name){
   destPos = { lat, lng };
@@ -513,7 +535,7 @@ function setDest(lat, lng, name){
 }
 
 // ═══════════════════════════════════════════
-// RUTA OSRM (con polyline y debounce)
+// RUTA OSRM
 // ═══════════════════════════════════════════
 function scheduleFetchRoute(){
   if(routeFetchTimeout) clearTimeout(routeFetchTimeout);
@@ -528,11 +550,16 @@ async function fetchRoute(){
   if(fetchingRoute) return;
   fetchingRoute = true;
 
-  document.getElementById('no-dest').style.display='none';
-  document.getElementById('route-card').style.display='none';
-  document.getElementById('tarifa-section').style.display='none';
-  document.getElementById('price-card').style.display='none';
-  document.getElementById('route-loading').style.display='block';
+  // FIX 2: Solo mostrar "cargando" y ocultar cards en la PRIMERA carga
+  const isFirstLoad = (lastRouteKm === null);
+  if(isFirstLoad){
+    document.getElementById('no-dest').style.display='none';
+    document.getElementById('route-card').style.display='none';
+    document.getElementById('tarifa-section').style.display='none';
+    document.getElementById('price-card').style.display='none';
+    document.getElementById('route-loading').style.display='block';
+  }
+  // En actualizaciones posteriores no tocamos la visibilidad de los cards
 
   try{
     const url = `https://router.project-osrm.org/route/v1/driving/${myPos.lng},${myPos.lat};${destPos.lng},${destPos.lat}?overview=full&geometries=geojson`;
@@ -540,15 +567,16 @@ async function fetchRoute(){
     if(d.code!=='Ok' || !d.routes?.length) throw new Error('Sin ruta');
     const route = d.routes[0];
     const newKm = route.distance / 1000;
-    // Si la distancia cambia menos de 50m, solo actualizamos tiempo y precio
+
+    // Si la distancia cambia menos de 50m, solo actualizamos tiempo y precio sin tocar el DOM estructural
     if(lastRouteKm !== null && Math.abs(newKm - lastRouteKm) < 0.05){
       routeDurMin = Math.round(route.duration/60);
       document.getElementById('route-time').textContent = '~'+routeDurMin+' min';
-      calcPrice();
+      calcPrice(); // FIX 3: calcPrice es seguro (usa setHTML solo si cambia)
       fetchingRoute = false;
-      document.getElementById('route-loading').style.display='none';
       return;
     }
+
     lastRouteKm = newKm;
     routeKm = newKm;
     routeDurMin = Math.round(route.duration/60);
@@ -565,7 +593,7 @@ async function fetchRoute(){
       }).addTo(map);
     }
 
-    // Ajustar vista solo si es necesario y no hay animación en curso
+    // Ajustar vista solo si la ruta no cabe en la pantalla o el zoom es muy bajo
     const bounds = routeLayer.getBounds();
     const mapBounds = map.getBounds();
     if(!mapBounds.contains(bounds) || map.getZoom() < 13){
@@ -598,11 +626,11 @@ async function fetchRoute(){
 }
 
 // ═══════════════════════════════════════════
-// CÁLCULO DE PRECIO (con detección de horario)
+// CÁLCULO DE PRECIO
 // ═══════════════════════════════════════════
 function esHorarioDiurno(){
   const ahora = new Date();
-  const dia = ahora.getDay(); // 0=domingo, 6=sábado
+  const dia = ahora.getDay();
   const hora = ahora.getHours() + ahora.getMinutes()/60;
   const esFinDeSemana = (dia === 0 || dia === 6);
   return !esFinDeSemana && (hora >= 7 && hora < 21);
@@ -617,26 +645,29 @@ function setTarifa(key, el){
 
 function fmt(n){ return n.toFixed(2)+' €'; }
 
+// FIX 3: helper que solo escribe el DOM si el contenido cambia realmente
+function setHTML(el, html){
+  if(el.innerHTML !== html) el.innerHTML = html;
+}
+
 function calcPrice(){
   if(routeKm == null) return;
   const t = TARIFAS[tarifaKey];
   const pc = document.getElementById('price-card');
   pc.style.display = 'block';
 
-  // T4 fijo
   if(t.tipo === 'fijo'){
-    pc.innerHTML = `
+    setHTML(pc, `
       <div class="price-fixed">
         <div class="pf-label">Precio fijo · Sin suplementos</div>
         <div class="pf-main">${fmt(t.precio_fijo)}</div>
         <div class="pf-desc">${t.nota}</div>
         <div class="pf-badge">${t.id} · ${t.horario}</div>
       </div>
-      <p class="info-note">Tarifa fija oficial. No aplica recargo por equipaje, nº de pasajeros, noche ni festivo.</p>`;
+      <p class="info-note">Tarifa fija oficial. No aplica recargo por equipaje, nº de pasajeros, noche ni festivo.</p>`);
     return;
   }
 
-  // T3
   if(t.tipo === 'minimo_luego_metro'){
     const esDiurno = esHorarioDiurno();
     const kmTarifa = esDiurno ? t.km_t1 : t.km_t2;
@@ -651,7 +682,7 @@ function calcPrice(){
       precio = t.minimo + extra;
       desglose = `22,00 € (primeros ${t.franquicia_km} km) + ${fmt(extra)} (${kmExtra.toFixed(1)} km extra a ${fmt(kmTarifa)}/km en ${nombreTarifa})`;
     }
-    pc.innerHTML = `
+    setHTML(pc, `
       <div class="price-meter">
         <div class="pm-left"><div class="pm-label">Precio estimado</div><div class="pm-main">${fmt(precio)}</div></div>
         <div class="pm-right"><div class="pm-tag">T3</div></div>
@@ -662,11 +693,10 @@ function calcPrice(){
         ${routeKm > t.franquicia_km ? `<div class="te-row"><span>Km extra (${(routeKm - t.franquicia_km).toFixed(1)} km × ${kmTarifa.toFixed(2)} €/km)</span><span class="te-val">${fmt((routeKm - t.franquicia_km) * kmTarifa)}</span></div>` : ''}
         <div class="te-row"><span>Total estimado</span><span class="te-val">${fmt(precio)}</span></div>
       </div>
-      <p class="info-note">${desglose}<br/>El exceso se calcula con ${nombreTarifa} según la hora actual.</p>`;
+      <p class="info-note">${desglose}<br/>El exceso se calcula con ${nombreTarifa} según la hora actual.</p>`);
     return;
   }
 
-  // T7
   if(t.tipo === 'salida_especial'){
     const esDiurno = esHorarioDiurno();
     const kmTarifa = esDiurno ? t.km : t.km_noche;
@@ -680,7 +710,7 @@ function calcPrice(){
       precio = t.salida + (kmExtra * kmTarifa);
     }
     const kmExtra = Math.max(0, routeKm - franquicia_km);
-    pc.innerHTML = `
+    setHTML(pc, `
       <div class="price-meter">
         <div class="pm-left"><div class="pm-label">Precio estimado</div><div class="pm-main">${fmt(precio)}</div></div>
         <div class="pm-right"><div class="pm-tag">T7</div></div>
@@ -691,14 +721,14 @@ function calcPrice(){
         ${kmExtra > 0 ? `<div class="te-row"><span>Km extra (${kmExtra.toFixed(2)} km × ${kmTarifa.toFixed(2)} €/km)</span><span class="te-val">${fmt(kmExtra * kmTarifa)}</span></div>` : '<div class="te-row"><span>Dentro de la franquicia</span><span class="te-val">0,00 €</span></div>'}
         <div class="te-row"><span>Total estimado</span><span class="te-val">${fmt(precio)}</span></div>
       </div>
-      <p class="info-note">Salida desde: Atocha · Chamartín · Av. América · Méndez Álvaro · IFEMA.<br/>El exceso se calcula con ${nombreTarifa} según la hora actual.</p>`;
+      <p class="info-note">Salida desde: Atocha · Chamartín · Av. América · Méndez Álvaro · IFEMA.<br/>El exceso se calcula con ${nombreTarifa} según la hora actual.</p>`);
     return;
   }
 
   // T1 / T2 normal
   let precio = t.bandera + (routeKm * t.km);
   precio = Math.max(precio, t.min);
-  pc.innerHTML = `
+  setHTML(pc, `
     <div class="price-meter">
       <div class="pm-left"><div class="pm-label">Precio estimado</div><div class="pm-main">${fmt(precio)}</div></div>
       <div class="pm-right"><div class="pm-tag">${t.id}</div></div>
@@ -713,11 +743,11 @@ function calcPrice(){
       <div class="te-row"><span>${t.horario}</span></div>
       <div class="te-row"><span>Bandera + ${routeKm.toFixed(1)} km × ${t.km.toFixed(2)} €/km</span><span class="te-val">${fmt(precio)}</span></div>
     </div>
-    <p class="info-note">Tarifas oficiales Ayuntamiento de Madrid 2026.<br/>Suplementos no incluidos: recogida app (máx. 5 €), maletas (0,85 €/bulto), Nochebuena/Nochevieja (7 €).</p>`;
+    <p class="info-note">Tarifas oficiales Ayuntamiento de Madrid 2026.<br/>Suplementos no incluidos: recogida app (máx. 5 €), maletas (0,85 €/bulto), Nochebuena/Nochevieja (7 €).</p>`);
 }
 
 // ═══════════════════════════════════════════
-// GUARDAR UBICACIÓN (solo si autenticado real)
+// GUARDAR UBICACIÓN
 // ═══════════════════════════════════════════
 async function saveLocation(lat, lng, acc){
   if(!currentUser || currentUser.id === 'demo-user') return;
