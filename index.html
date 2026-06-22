@@ -2,10 +2,19 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Tazi · Madrid</title>
+
+  <!-- Manifest para PWA -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Iconos para la instalación (opcional pero recomendado) -->
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="theme-color" content="#0f1117">
+
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%;font-family:'Inter',sans-serif;overflow:hidden}
@@ -39,6 +48,8 @@
     .btn-ghost{background:transparent;color:#e8e8f0;border:1px solid var(--auth-b);margin-top:.6rem}
     .btn-ghost:hover{border-color:var(--teal);color:var(--teal);opacity:1}
     .btn-demo{background:#4a4a6a;color:#fff;margin-top:.6rem}.btn-demo:hover{background:#5a5a7a}
+    .btn-install{background:var(--blue2);color:#fff;margin-top:.6rem;display:flex;align-items:center;justify-content:center;gap:.5rem}
+    .btn-install:hover{background:#1557b0}
     .divider{display:flex;align-items:center;gap:.75rem;color:var(--muted2);font-size:.78rem;margin:1rem 0}
     .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--auth-b)}
     .footer-link{text-align:center;font-size:.82rem;color:var(--muted2);margin-top:1.25rem}
@@ -160,6 +171,16 @@
     .leaflet-popup-content-wrapper{border-radius:12px!important;box-shadow:var(--sh2)!important;font-family:'Inter',sans-serif!important}
     .leaflet-popup-tip{display:none}
     .leaflet-popup-content{margin:.65rem .9rem!important;font-size:.85rem!important}
+
+    /* Modal de instrucciones para iOS */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:9999;display:none;align-items:center;justify-content:center;padding:1.5rem}
+    .modal-overlay.show{display:flex}
+    .modal-box{background:var(--auth-s);border-radius:20px;padding:2rem;max-width:380px;width:100%;border:1px solid var(--auth-b);color:#e8e8f0}
+    .modal-box h2{font-size:1.2rem;margin-bottom:.5rem}
+    .modal-box p{font-size:.85rem;color:var(--muted2);margin-bottom:1rem}
+    .modal-box ol{padding-left:1.2rem;font-size:.82rem;color:#ccc;margin-bottom:1.5rem}
+    .modal-box ol li{margin-bottom:.5rem}
+    .modal-box .btn{background:var(--teal);color:#0f1117;border:none;padding:.7rem;border-radius:9px;font-weight:600;cursor:pointer;width:100%}
   </style>
 </head>
 <body>
@@ -181,6 +202,7 @@
     <div class="divider">o</div>
     <button class="btn btn-ghost" onclick="doMagic()">Enviar enlace mágico</button>
     <button class="btn btn-demo" onclick="entrarDemo()">🚕 Entrar sin cuenta (demo)</button>
+    <button class="btn btn-install" id="btn-install" style="display:none" onclick="instalarApp()">📲 Descargar App</button>
     <p class="footer-link">¿Sin cuenta? <a href="#" onclick="sw('register')">Regístrate</a></p>
   </div>
   <div id="view-register" class="view">
@@ -192,6 +214,20 @@
     <p class="footer-link">¿Ya tienes cuenta? <a href="#" onclick="sw('login')">Inicia sesión</a></p>
   </div>
 </div>
+</div>
+
+<!-- Modal de instrucciones -->
+<div class="modal-overlay" id="install-modal">
+  <div class="modal-box">
+    <h2>📲 Instalar Tazi</h2>
+    <p>Tu navegador no permite instalación automática, pero puedes añadir Tazi a tu pantalla de inicio:</p>
+    <ol>
+      <li><strong>En Android (Chrome):</strong> toca el menú (⋮) y selecciona <em>Instalar aplicación</em>.</li>
+      <li><strong>En iPhone (Safari):</strong> toca el icono de compartir y elige <em>Añadir a pantalla de inicio</em>.</li>
+      <li><strong>En otros navegadores:</strong> busca la opción <em>Añadir a pantalla de inicio</em> en el menú.</li>
+    </ol>
+    <button class="btn" onclick="cerrarModal()">Entendido</button>
+  </div>
 </div>
 
 <!-- ════ MAPA ════ -->
@@ -283,8 +319,8 @@ try {
 // TARIFAS TAXI MADRID 2026 (OFICIAL)
 // ═══════════════════════════════════════════
 const TARIFAS = {
-  t1: { id:'T1', nombre:'Laborable diurno', horario:'Lun–Vie 7:00–21:00 h', tipo:'metro', bandera:2.55, km:1.40, hora:27.00, min:4.50 },
-  t2: { id:'T2', nombre:'Nocturno y festivos', horario:'Diario 21:00–7:00 h · Sáb/Dom/Fest 7:00–21:00 h', tipo:'metro', bandera:3.20, km:1.60, hora:29.00, min:5.50 },
+  t1: { id:'T1', nombre:'Laborable diurno', horario:'Lun–Vie 7:00–21:00 h', tipo:'metro', bandera:2.55, km:1.40, min:4.50 },
+  t2: { id:'T2', nombre:'Nocturno y festivos', horario:'Diario 21:00–7:00 h · Sáb/Dom/Fest 7:00–21:00 h', tipo:'metro', bandera:3.20, km:1.60, min:5.50 },
   t4: { id:'T4', nombre:'Aeropuerto → dentro M-30', horario:'24h · 365 días · Sin suplementos', tipo:'fijo', precio_fijo:33.00, nota:'Tarifa fija entre cualquier terminal (T1–T4) y cualquier punto dentro de la M-30. Sin recargo por equipaje, nº de pasajeros ni horario.' },
   t3: { id:'T3', nombre:'Aeropuerto → fuera M-30', horario:'24h · 365 días', tipo:'minimo_luego_metro', minimo:22.00, franquicia_km:9.0, km_t1:1.40, km_t2:1.60, nota:'Mínimo 22 € cubre los primeros 9 km. Superados, el taxímetro sigue en T1 (día) o T2 (noche/fest).' },
   t7: { id:'T7', nombre:'Estaciones y IFEMA', horario:'24h · 365 días', tipo:'salida_especial', salida:8.00, franquicia_m:1450, km:1.40, km_noche:1.60, nota:'Salida desde: Atocha · Chamartín · Av. América · Méndez Álvaro · IFEMA.\n8 € incluye los primeros 1.450 m. Luego T1 (día) o T2 (noche/fest).' }
@@ -293,14 +329,14 @@ const TARIFAS = {
 // ═══════════════════════════════════════════
 // DETECCIÓN DE ORIGEN (AEROPUERTO / ESTACIONES)
 // ═══════════════════════════════════════════
-const AIRPORT_COORDS = { lat: 40.4722, lng: -3.5604 }; // Centro aproximado del aeropuerto
-const AIRPORT_RADIUS_KM = 4.0; // Aumentado a 4 km para cubrir todo el aeropuerto
+const AIRPORT_COORDS = { lat: 40.4722, lng: -3.5604 };
+const AIRPORT_RADIUS_KM = 4.0;
 const STATION_COORDS = [
-  { lat: 40.4060, lng: -3.6897 }, // Atocha
-  { lat: 40.4729, lng: -3.6823 }, // Chamartín
-  { lat: 40.4379, lng: -3.6774 }, // Av. América
-  { lat: 40.4011, lng: -3.6787 }, // Méndez Álvaro
-  { lat: 40.4695, lng: -3.5988 }  // IFEMA
+  { lat: 40.4060, lng: -3.6897 },
+  { lat: 40.4729, lng: -3.6823 },
+  { lat: 40.4379, lng: -3.6774 },
+  { lat: 40.4011, lng: -3.6787 },
+  { lat: 40.4695, lng: -3.5988 }
 ];
 const STATION_RADIUS_KM = 0.8;
 
@@ -315,27 +351,14 @@ function distanciaKm(a, b) {
 function detectarOrigen() {
   const origen = origPos || myPos;
   if (!origen) return 'ciudad';
-
-  // 1. Comprobar por nombre (más fiable)
   const nombre = (origName || '').toLowerCase();
-  if (nombre.includes('aeropuerto') || nombre.includes('barajas')) {
-    return 'aeropuerto';
-  }
+  if (nombre.includes('aeropuerto') || nombre.includes('barajas')) return 'aeropuerto';
   const estacionesNombres = ['atocha', 'chamartín', 'américa', 'méndez álvaro', 'méndez alvaro', 'ifema'];
-  if (estacionesNombres.some(s => nombre.includes(s))) {
-    return 'estacion';
-  }
-
-  // 2. Comprobar por distancia
-  if (distanciaKm(origen, AIRPORT_COORDS) <= AIRPORT_RADIUS_KM) {
-    return 'aeropuerto';
-  }
+  if (estacionesNombres.some(s => nombre.includes(s))) return 'estacion';
+  if (distanciaKm(origen, AIRPORT_COORDS) <= AIRPORT_RADIUS_KM) return 'aeropuerto';
   for (let st of STATION_COORDS) {
-    if (distanciaKm(origen, st) <= STATION_RADIUS_KM) {
-      return 'estacion';
-    }
+    if (distanciaKm(origen, st) <= STATION_RADIUS_KM) return 'estacion';
   }
-
   return 'ciudad';
 }
 
@@ -343,7 +366,7 @@ function detectarOrigen() {
 // ESTADO GLOBAL
 // ═══════════════════════════════════════════
 let map, myMarker, accCircle, destMarker, origMarker, routeLayer;
-let myPos = null, origPos = null, origName = ''; // <-- nuevo campo para el nombre del origen
+let myPos = null, origPos = null, origName = '';
 let destPos = null, routeKm = null, routeDurMin = null;
 let watchId = null, currentUser = null, lastSaved = 0;
 let tarifaKey = 't1', fullscreen = false;
@@ -351,6 +374,51 @@ let fetchingRoute = false, routeFetchTimeout = null, lastRouteKm = null, isFlyin
 let lastMyPos = null, acFocus = 'dest';
 const GPS_THRESHOLD_M = 15;
 const SAVE_MS = 10000;
+
+// ═══════════════════════════════════════════
+// INSTALACIÓN PWA
+// ═══════════════════════════════════════════
+let deferredPrompt = null;
+const btnInstall = document.getElementById('btn-install');
+const modal = document.getElementById('install-modal');
+
+// Ocultar botón si ya está en modo standalone
+if (window.matchMedia('(display-mode: standalone)').matches) {
+  btnInstall.style.display = 'none';
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  btnInstall.style.display = 'flex';
+});
+
+window.addEventListener('appinstalled', () => {
+  btnInstall.style.display = 'none';
+  console.log('App instalada correctamente');
+});
+
+function instalarApp() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choice) => {
+      if (choice.outcome === 'accepted') {
+        console.log('Usuario aceptó la instalación');
+      } else {
+        console.log('Usuario rechazó la instalación');
+      }
+      deferredPrompt = null;
+      btnInstall.style.display = 'none';
+    });
+  } else {
+    // Mostrar modal con instrucciones
+    modal.classList.add('show');
+  }
+}
+
+function cerrarModal() {
+  modal.classList.remove('show');
+}
 
 // ═══════════════════════════════════════════
 // AUTH UI
@@ -497,11 +565,9 @@ function onPos(pos){
     myMarker = L.marker(ll, { icon, zIndexOffset:1000 }).addTo(map).bindPopup('<b>Tu ubicación</b>', { closeButton:false });
     accCircle = L.circle(ll, { radius:acc, color:'#4285f4', fillColor:'#4285f4', fillOpacity:.08, weight:1 }).addTo(map);
     map.setView(ll, 15);
-    // Rellenar campo origen con dirección aproximada
     reverseGeocode(lat, lng).then(addr=>{
       const inp = document.getElementById('orig-input');
       if(!origPos && inp.value === '') inp.value = addr;
-      // Guardar el nombre para detección por texto
       origName = addr;
       actualizarChipsOrigen();
     });
@@ -516,7 +582,6 @@ function onPos(pos){
   if(moved){
     lastMyPos = newPos;
     if(!origPos && destPos) scheduleFetchRoute();
-    // Actualizar tarifas si el origen cambia por GPS
     actualizarChipsOrigen();
   }
 
@@ -534,7 +599,7 @@ async function reverseGeocode(lat, lng){
     if(d.address){
       const a = d.address;
       const nombre = [a.road, a.house_number].filter(Boolean).join(' ') || d.display_name.split(',')[0];
-      origName = nombre; // guardar para detección
+      origName = nombre;
       return nombre;
     }
   } catch(e){}
@@ -551,7 +616,6 @@ let acTimer=null;
 function focusOrig(){ acFocus='orig'; }
 function focusDest(){ acFocus='dest'; }
 
-// ── ORIGEN ──
 function onOrigSI(){
   clearTimeout(acTimer);
   const q=document.getElementById('orig-input').value.trim();
@@ -575,14 +639,13 @@ function pickOrigAC(lat, lon, name){
   document.getElementById('btn-clear-orig').style.display='block';
   document.getElementById('ac-list').style.display='none';
   origPos = { lat: parseFloat(lat), lng: parseFloat(lon) };
-  origName = label; // guardar nombre para detección
-  // Mover marcador GPS al origen manual
+  origName = label;
   const ll=[origPos.lat, origPos.lng];
   const icon = L.divIcon({ className:'', html:'<div class="my-dot"></div>', iconSize:[16,16], iconAnchor:[8,8] });
   if(myMarker){ myMarker.setLatLng(ll); if(accCircle) accCircle.setLatLng(ll); }
   else { myMarker = L.marker(ll,{icon,zIndexOffset:1000}).addTo(map).bindPopup(`<b>${label}</b>`,{closeButton:false}); }
   lastRouteKm = null;
-  actualizarChipsOrigen(); // actualizar chips según nuevo origen
+  actualizarChipsOrigen();
   if(destPos) scheduleFetchRoute();
 }
 function clearOrig(){
@@ -590,15 +653,13 @@ function clearOrig(){
   document.getElementById('btn-clear-orig').style.display='none';
   document.getElementById('ac-list').style.display='none';
   origPos = null;
-  origName = ''; // resetear nombre
-  // Volver el marcador a GPS si disponible
+  origName = '';
   if(myPos && myMarker){ myMarker.setLatLng([myPos.lat,myPos.lng]); if(accCircle) accCircle.setLatLng([myPos.lat,myPos.lng]); }
   lastRouteKm = null;
   actualizarChipsOrigen();
   if(destPos) scheduleFetchRoute();
 }
 
-// ── DESTINO ──
 function onSI(){
   clearTimeout(acTimer);
   const q=document.getElementById('dest-input').value.trim();
@@ -668,10 +729,7 @@ function setDest(lat, lng, name){
     destMarker = L.marker([lat,lng], { icon }).addTo(map);
   }
   destMarker.bindPopup(`<b>${name}</b>`).openPopup();
-  if(!myPos){
-    map.setView([lat,lng], 14);
-  }
-  // Reevaluar tarifas porque la elección T4/T3 depende del destino
+  if(!myPos) map.setView([lat,lng], 14);
   actualizarChipsOrigen();
   scheduleFetchRoute();
 }
@@ -770,15 +828,12 @@ async function fetchRoute(){
 function actualizarChipsOrigen() {
   const tipo = detectarOrigen();
   const chips = document.querySelectorAll('.chip');
-  // Ocultar todos
   chips.forEach(c => c.classList.add('hidden'));
 
   let tarifaPorDefecto = 't1';
   if (tipo === 'aeropuerto') {
-    // Mostrar solo t4 y t3
     document.querySelector('.chip[data-key="t4"]').classList.remove('hidden');
     document.querySelector('.chip[data-key="t3"]').classList.remove('hidden');
-    // Determinar si el destino está dentro de la M-30 (aproximado)
     const centroM30 = { lat: 40.4168, lng: -3.7038 };
     if (destPos && distanciaKm(destPos, centroM30) <= 8) {
       tarifaPorDefecto = 't4';
@@ -789,14 +844,12 @@ function actualizarChipsOrigen() {
     document.querySelector('.chip[data-key="t7"]').classList.remove('hidden');
     tarifaPorDefecto = 't7';
   } else {
-    // ciudad
     document.querySelector('.chip[data-key="t1"]').classList.remove('hidden');
     document.querySelector('.chip[data-key="t2"]').classList.remove('hidden');
     const esDiurno = esHorarioDiurno();
     tarifaPorDefecto = esDiurno ? 't1' : 't2';
   }
 
-  // Activar la tarifa por defecto
   const chipActivo = document.querySelector(`.chip[data-key="${tarifaPorDefecto}"]`);
   if (chipActivo) {
     document.querySelectorAll('.chip.active').forEach(c => c.classList.remove('active'));
@@ -939,10 +992,18 @@ async function saveLocation(lat, lng, acc){
 
 document.addEventListener('click', e=>{
   if(!e.target.closest('#search-bar')) document.getElementById('ac-list').style.display='none';
-  if(!e.target.closest('#orig-input') && !e.target.closest('#dest-input')) {
-    // close AC silently
-  }
 });
+
+// ═══════════════════════════════════════════
+// REGISTRO DEL SERVICE WORKER (PWA)
+// ═══════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('Service Worker registrado correctamente'))
+      .catch(err => console.warn('Error al registrar SW:', err));
+  });
+}
 </script>
 </body>
 </html>
