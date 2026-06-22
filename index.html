@@ -58,14 +58,23 @@
     #map{width:100%;height:100%}
 
     /* Buscador */
-    #search-bar{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:500;width:calc(100% - 20px);max-width:420px}
-    .sbox{background:white;border-radius:26px;box-shadow:var(--sh2);display:flex;align-items:center;padding:.5rem .75rem .5rem 1rem;gap:.5rem}
-    .sbox input{flex:1;border:none;outline:none;font-family:inherit;font-size:.9rem;color:var(--text);background:transparent}
-    .sbox input::placeholder{color:#9aa0a6}
-    .sbox-btn{background:var(--blue);color:white;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.9rem}
+    #search-bar{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:500;width:calc(100% - 20px);max-width:420px;position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:500;width:calc(100% - 20px);max-width:420px}
+    #search-bar{top:10px}
+    .route-inputs{display:flex;flex-direction:column;gap:5px}
+    .sbox-orig{border-bottom:1px solid #f0f0f0}
+    .sbox-orig input{color:var(--muted)}
+    .orig-dot{width:10px;height:10px;background:#34a853;border:2px solid white;border-radius:50%;box-shadow:0 0 0 2px #34a853;flex-shrink:0}
+    .dest-dot{width:10px;height:10px;background:var(--red);border-radius:50%;flex-shrink:0}
+    .connector{width:1px;height:8px;background:#dadce0;margin-left:4px}
+    .sbox-wrap{display:flex;flex-direction:column;background:white;border-radius:18px;box-shadow:var(--sh2);overflow:visible}
+    .sbox-row{display:flex;align-items:center;padding:.45rem .75rem .45rem .9rem;gap:.55rem}
+    .sbox-row:first-child{border-bottom:1px solid #f0f0f0}
+    .sbox-row input{flex:1;border:none;outline:none;font-family:inherit;font-size:.88rem;color:var(--text);background:transparent}
+    .sbox-row input::placeholder{color:#9aa0a6}
+    .sbox-btn{background:var(--blue);color:white;border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.85rem}
     .sbox-btn:hover{background:#1557b0}
-    .sbox-clear{background:none;border:none;cursor:pointer;color:var(--muted);font-size:1rem;padding:2px 4px;display:none}
-    #ac-list{background:white;border-radius:14px;margin-top:6px;box-shadow:var(--sh2);overflow:hidden;display:none}
+    .sbox-clear{background:none;border:none;cursor:pointer;color:var(--muted);font-size:.9rem;padding:2px 4px;line-height:1}
+    #ac-list{background:white;border-radius:14px;margin-top:6px;box-shadow:var(--sh2);overflow:hidden;display:none;position:absolute;width:100%;z-index:10}
     .ac-item{padding:.6rem 1rem;font-size:.84rem;color:var(--text);cursor:pointer;border-bottom:1px solid #f0f0f0;display:flex;align-items:flex-start;gap:.6rem}
     .ac-item:last-child{border-bottom:none}
     .ac-item:hover{background:#f8f9fa}
@@ -192,11 +201,20 @@
   <div id="map-wrap">
     <div id="map"></div>
     <div id="search-bar">
-      <div class="sbox">
-        <span style="color:#5f6368;font-size:.9rem;flex-shrink:0">🔍</span>
-        <input id="dest-input" type="text" placeholder="¿A dónde vas?" oninput="onSI()" onkeydown="if(event.key==='Enter')doSearch()"/>
-        <button class="sbox-clear" id="btn-clear" onclick="clearDest()">✕</button>
-        <button class="sbox-btn" onclick="doSearch()">→</button>
+      <div class="sbox-wrap">
+        <!-- Origen -->
+        <div class="sbox-row">
+          <div class="orig-dot"></div>
+          <input id="orig-input" type="text" placeholder="Mi ubicación (GPS)" oninput="onOrigSI()" onkeydown="if(event.key==='Enter')doOrigSearch()" onfocus="focusOrig()"/>
+          <button class="sbox-clear" id="btn-clear-orig" onclick="clearOrig()" style="display:none">✕</button>
+        </div>
+        <!-- Destino -->
+        <div class="sbox-row">
+          <div class="dest-dot"></div>
+          <input id="dest-input" type="text" placeholder="¿A dónde vas?" oninput="onSI()" onkeydown="if(event.key==='Enter')doSearch()" onfocus="focusDest()"/>
+          <button class="sbox-clear" id="btn-clear" onclick="clearDest()" style="display:none">✕</button>
+          <button class="sbox-btn" onclick="doSearch()">→</button>
+        </div>
       </div>
       <div id="ac-list"></div>
     </div>
@@ -277,14 +295,13 @@ const TARIFAS = {
 // ═══════════════════════════════════════════
 // ESTADO GLOBAL
 // ═══════════════════════════════════════════
-let map, myMarker, accCircle, destMarker, routeLayer;
-let myPos = null, destPos = null, routeKm = null, routeDurMin = null;
+let map, myMarker, accCircle, destMarker, origMarker, routeLayer;
+let myPos = null, origPos = null, destPos = null, routeKm = null, routeDurMin = null;
 let watchId = null, currentUser = null, lastSaved = 0;
 let tarifaKey = 't1', fullscreen = false;
 let fetchingRoute = false, routeFetchTimeout = null, lastRouteKm = null, isFlying = false;
-// FIX 1: guardamos la última posición para medir el desplazamiento
-let lastMyPos = null;
-const GPS_THRESHOLD_M = 15; // metros mínimos para recalcular
+let lastMyPos = null, acFocus = 'dest'; // 'orig' o 'dest'
+const GPS_THRESHOLD_M = 15;
 const SAVE_MS = 10000;
 
 // ═══════════════════════════════════════════
@@ -433,18 +450,24 @@ function onPos(pos){
     myMarker = L.marker(ll, { icon, zIndexOffset:1000 }).addTo(map).bindPopup('<b>Tu ubicación</b>', { closeButton:false });
     accCircle = L.circle(ll, { radius:acc, color:'#4285f4', fillColor:'#4285f4', fillOpacity:.08, weight:1 }).addTo(map);
     map.setView(ll, 15);
+    // Rellenar campo origen con dirección aproximada
+    reverseGeocode(lat, lng).then(addr=>{
+      const inp = document.getElementById('orig-input');
+      // Solo rellenar si el usuario no ha escrito nada ya
+      if(!origPos && inp.value === '') inp.value = addr;
+    });
   } else {
     myMarker.setLatLng(ll);
     accCircle.setLatLng(ll);
     accCircle.setRadius(acc);
   }
 
-  // FIX 1: solo recalcular ruta si nos movimos más de GPS_THRESHOLD_M
   const moved = !lastMyPos || distMetros(lastMyPos, newPos) >= GPS_THRESHOLD_M;
   myPos = newPos;
   if(moved){
     lastMyPos = newPos;
-    if(destPos) scheduleFetchRoute();
+    // Si el origen es el GPS (no manual), recalcular ruta
+    if(!origPos && destPos) scheduleFetchRoute();
   }
 
   const now = Date.now();
@@ -453,6 +476,18 @@ function onPos(pos){
     lastSaved = now;
   }
 }
+
+async function reverseGeocode(lat, lng){
+  try{
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=es`,{headers:{'User-Agent':'TaziApp/1.0'}});
+    const d = await r.json();
+    if(d.address){
+      const a = d.address;
+      return [a.road, a.house_number].filter(Boolean).join(' ') || d.display_name.split(',')[0];
+    }
+  } catch(e){}
+  return 'Mi ubicación';
+}
 function onGPSErr(e){ const m={1:'Permiso GPS denegado',2:'Ubicación no disponible',3:'Tiempo agotado'}; setSt(m[e.code]||'Error GPS', false); }
 function setSt(t, on){ document.getElementById('stext').textContent=t; document.getElementById('sdot').className='sdot'+(on?' on':''); }
 
@@ -460,26 +495,75 @@ function setSt(t, on){ document.getElementById('stext').textContent=t; document.
 // BÚSQUEDA
 // ═══════════════════════════════════════════
 let acTimer=null;
+
+function focusOrig(){ acFocus='orig'; }
+function focusDest(){ acFocus='dest'; }
+
+// ── ORIGEN ──
+function onOrigSI(){
+  clearTimeout(acTimer);
+  const q=document.getElementById('orig-input').value.trim();
+  document.getElementById('btn-clear-orig').style.display=q?'block':'none';
+  if(q.length<3){ document.getElementById('ac-list').style.display='none'; return; }
+  acTimer=setTimeout(()=>fetchAC(q,'orig'), 350);
+}
+async function doOrigSearch(){
+  document.getElementById('ac-list').style.display='none';
+  const q=document.getElementById('orig-input').value.trim();
+  if(!q) return;
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+' Madrid')}&format=json&limit=1&countrycodes=es`,{headers:{'Accept-Language':'es','User-Agent':'TaziApp/1.0'}});
+    const d=await r.json();
+    if(d.length) pickOrigAC(d[0].lat, d[0].lon, d[0].display_name);
+  }catch(e){ console.warn(e); }
+}
+function pickOrigAC(lat, lon, name){
+  const label = name.split(',')[0];
+  document.getElementById('orig-input').value = label;
+  document.getElementById('btn-clear-orig').style.display='block';
+  document.getElementById('ac-list').style.display='none';
+  origPos = { lat: parseFloat(lat), lng: parseFloat(lon) };
+  // Mover marcador GPS al origen manual
+  const ll=[origPos.lat, origPos.lng];
+  const icon = L.divIcon({ className:'', html:'<div class="my-dot"></div>', iconSize:[16,16], iconAnchor:[8,8] });
+  if(myMarker){ myMarker.setLatLng(ll); if(accCircle) accCircle.setLatLng(ll); }
+  else { myMarker = L.marker(ll,{icon,zIndexOffset:1000}).addTo(map).bindPopup(`<b>${label}</b>`,{closeButton:false}); }
+  lastRouteKm = null; // forzar recálculo completo
+  if(destPos) scheduleFetchRoute();
+}
+function clearOrig(){
+  document.getElementById('orig-input').value='';
+  document.getElementById('btn-clear-orig').style.display='none';
+  document.getElementById('ac-list').style.display='none';
+  origPos = null;
+  // Volver el marcador a GPS si disponible
+  if(myPos && myMarker){ myMarker.setLatLng([myPos.lat,myPos.lng]); if(accCircle) accCircle.setLatLng([myPos.lat,myPos.lng]); }
+  lastRouteKm = null;
+  if(destPos) scheduleFetchRoute();
+}
+
+// ── DESTINO ──
 function onSI(){
   clearTimeout(acTimer);
   const q=document.getElementById('dest-input').value.trim();
   document.getElementById('btn-clear').style.display=q?'block':'none';
   if(q.length<3){ document.getElementById('ac-list').style.display='none'; return; }
-  acTimer=setTimeout(()=>fetchAC(q), 350);
+  acTimer=setTimeout(()=>fetchAC(q,'dest'), 350);
 }
-async function fetchAC(q){
+async function fetchAC(q, field){
   try{
     const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+' Madrid')}&format=json&limit=5&countrycodes=es&addressdetails=1`,{headers:{'Accept-Language':'es','User-Agent':'TaziApp/1.0'}});
-    showAC(await r.json());
+    showAC(await r.json(), field);
   }catch(e){ console.warn(e); }
 }
-function showAC(res){
+function showAC(res, field){
   const box=document.getElementById('ac-list');
   if(!res.length){ box.style.display='none'; return; }
   box.innerHTML = res.map(r=>{
     const name = r.display_name.split(',')[0];
     const sub = r.display_name.split(',').slice(1,3).join(',').trim();
-    return `<div class="ac-item" onclick="pickAC(${r.lat},${r.lon},'${r.display_name.replace(/'/g,"\\'")}')"><span class="ac-ic">📍</span><div><div class="ac-name">${name}</div><div class="ac-sub">${sub}</div></div></div>`;
+    const fn = field==='orig' ? 'pickOrigAC' : 'pickAC';
+    return `<div class="ac-item" onclick="${fn}(${r.lat},${r.lon},'${r.display_name.replace(/'/g,"\\'")}')"><span class="ac-ic">${field==='orig'?'🟢':'📍'}</span><div><div class="ac-name">${name}</div><div class="ac-sub">${sub}</div></div></div>`;
   }).join('');
   box.style.display='block';
 }
@@ -546,7 +630,9 @@ function scheduleFetchRoute(){
 }
 
 async function fetchRoute(){
-  if(!myPos || !destPos) return;
+  // Usar origen manual si está establecido, si no el GPS
+  const origen = origPos || myPos;
+  if(!origen || !destPos) return;
   if(fetchingRoute) return;
   fetchingRoute = true;
 
@@ -562,7 +648,7 @@ async function fetchRoute(){
   // En actualizaciones posteriores no tocamos la visibilidad de los cards
 
   try{
-    const url = `https://router.project-osrm.org/route/v1/driving/${myPos.lng},${myPos.lat};${destPos.lng},${destPos.lat}?overview=full&geometries=geojson`;
+    const url = `https://router.project-osrm.org/route/v1/driving/${origen.lng},${origen.lat};${destPos.lng},${destPos.lat}?overview=full&geometries=geojson`;
     const d = await (await fetch(url)).json();
     if(d.code!=='Ok' || !d.routes?.length) throw new Error('Sin ruta');
     const route = d.routes[0];
@@ -743,7 +829,7 @@ function calcPrice(){
       <div class="te-row"><span>${t.horario}</span></div>
       <div class="te-row"><span>Bandera + ${routeKm.toFixed(1)} km × ${t.km.toFixed(2)} €/km</span><span class="te-val">${fmt(precio)}</span></div>
     </div>
-    <p class="info-note">Tarifas oficiales Ayuntamiento de Madrid 2026.<br/>Suplementos no incluidos: recogida app (máx. 5 €), maletas (0,85 €/bulto), Nochebuena/Nochevieja (7 €).</p>`);
+    <p class="info-note">Tarifas oficiales Ayuntamiento de Madrid 2026.<br/>Suplementos no incluidos: recogida app (máx. 5 €), Nochebuena/Nochevieja (7 €).</p>`);
 }
 
 // ═══════════════════════════════════════════
@@ -759,6 +845,9 @@ async function saveLocation(lat, lng, acc){
 
 document.addEventListener('click', e=>{
   if(!e.target.closest('#search-bar')) document.getElementById('ac-list').style.display='none';
+  if(!e.target.closest('#orig-input') && !e.target.closest('#dest-input')) {
+    // close AC silently
+  }
 });
 </script>
 </body>
