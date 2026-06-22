@@ -202,7 +202,8 @@
     <div class="divider">o</div>
     <button class="btn btn-ghost" onclick="doMagic()">Enviar enlace mágico</button>
     <button class="btn btn-demo" onclick="entrarDemo()">🚕 Entrar sin cuenta (demo)</button>
-    <button class="btn btn-install" id="btn-install" style="display:none" onclick="instalarApp()">📲 Descargar App</button>
+    <!-- BOTÓN DE INSTALACIÓN: siempre visible (excepto si ya está instalado) -->
+    <button class="btn btn-install" id="btn-install" onclick="instalarApp()">📲 Instalar Tazi</button>
     <p class="footer-link">¿Sin cuenta? <a href="#" onclick="sw('register')">Regístrate</a></p>
   </div>
   <div id="view-register" class="view">
@@ -376,20 +377,25 @@ const GPS_THRESHOLD_M = 15;
 const SAVE_MS = 10000;
 
 // ═══════════════════════════════════════════
-// INSTALACIÓN PWA
+// INSTALACIÓN PWA (MEJORADA)
 // ═══════════════════════════════════════════
 let deferredPrompt = null;
 const btnInstall = document.getElementById('btn-install');
 const modal = document.getElementById('install-modal');
 
-// Ocultar botón si ya está en modo standalone
+// Si ya está instalada (modo standalone), ocultamos el botón
 if (window.matchMedia('(display-mode: standalone)').matches) {
   btnInstall.style.display = 'none';
+} else {
+  // Siempre visible si no está instalada
+  btnInstall.style.display = 'flex';
 }
 
+// Escuchar el evento de instalación (solo navegadores compatibles)
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
+  // Aseguramos que el botón esté visible
   btnInstall.style.display = 'flex';
 });
 
@@ -400,18 +406,19 @@ window.addEventListener('appinstalled', () => {
 
 function instalarApp() {
   if (deferredPrompt) {
+    // Navegador compatible: muestra el diálogo nativo
     deferredPrompt.prompt();
     deferredPrompt.userChoice.then((choice) => {
       if (choice.outcome === 'accepted') {
         console.log('Usuario aceptó la instalación');
+        btnInstall.style.display = 'none';
       } else {
         console.log('Usuario rechazó la instalación');
       }
       deferredPrompt = null;
-      btnInstall.style.display = 'none';
     });
   } else {
-    // Mostrar modal con instrucciones
+    // Navegador no compatible: mostramos el modal con instrucciones
     modal.classList.add('show');
   }
 }
