@@ -127,14 +127,12 @@
     /* Precio */
     #price-card{display:none;margin-top:.6rem}
 
-    /* Card precio especial fijo */
     .price-fixed{background:linear-gradient(135deg,#34a853 0%,#1e7e34 100%);border-radius:14px;padding:1rem 1.25rem;color:white;margin-bottom:.65rem}
     .pf-label{font-size:.74rem;opacity:.85;margin-bottom:.2rem}
     .pf-main{font-size:2.2rem;font-weight:700;letter-spacing:-.02em;line-height:1}
     .pf-desc{font-size:.75rem;opacity:.85;margin-top:.3rem;line-height:1.4}
     .pf-badge{display:inline-block;background:rgba(255,255,255,.2);border-radius:6px;padding:.15rem .5rem;font-size:.7rem;font-weight:600;margin-top:.4rem}
 
-    /* Card precio taxímetro */
     .price-meter{background:linear-gradient(135deg,#1a73e8 0%,#4285f4 100%);border-radius:14px;padding:1rem 1.25rem;color:white;display:flex;align-items:center;justify-content:space-between;margin-bottom:.65rem}
     .pm-left .pm-label{font-size:.74rem;opacity:.85;margin-bottom:.15rem}
     .pm-left .pm-main{font-size:2.1rem;font-weight:700;letter-spacing:-.02em;line-height:1}
@@ -147,7 +145,6 @@
     .pg-val{font-size:.92rem;font-weight:700;color:var(--text)}
     .pg-key{font-size:.64rem;color:var(--muted);margin-top:2px;line-height:1.3}
 
-    /* Box explicación tarifa especial */
     .tarifa-explain{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:.7rem .9rem;margin-bottom:.6rem}
     .te-title{font-size:.72rem;font-weight:700;color:#92400e;margin-bottom:.4rem;display:flex;align-items:center;gap:.3rem}
     .te-row{display:flex;justify-content:space-between;align-items:flex-start;font-size:.75rem;color:#78350f;padding:.2rem 0;border-bottom:1px solid #fde68a}
@@ -297,7 +294,7 @@ const TARIFAS = {
 // DETECCIÓN DE ORIGEN (AEROPUERTO / ESTACIONES)
 // ═══════════════════════════════════════════
 const AIRPORT_COORDS = { lat: 40.4722, lng: -3.5604 }; // Centro aproximado del aeropuerto
-const AIRPORT_RADIUS_KM = 2.0; // 2 km de radio
+const AIRPORT_RADIUS_KM = 4.0; // Aumentado a 4 km para cubrir todo el aeropuerto
 const STATION_COORDS = [
   { lat: 40.4060, lng: -3.6897 }, // Atocha
   { lat: 40.4729, lng: -3.6823 }, // Chamartín
@@ -305,7 +302,7 @@ const STATION_COORDS = [
   { lat: 40.4011, lng: -3.6787 }, // Méndez Álvaro
   { lat: 40.4695, lng: -3.5988 }  // IFEMA
 ];
-const STATION_RADIUS_KM = 0.8; // 800 m de radio
+const STATION_RADIUS_KM = 0.8;
 
 function distanciaKm(a, b) {
   const R = 6371;
@@ -317,14 +314,22 @@ function distanciaKm(a, b) {
 
 function detectarOrigen() {
   const origen = origPos || myPos;
-  if (!origen) return 'ciudad'; // por defecto
+  if (!origen) return 'ciudad';
 
-  // Comprobar aeropuerto
+  // 1. Comprobar por nombre (más fiable)
+  const nombre = (origName || '').toLowerCase();
+  if (nombre.includes('aeropuerto') || nombre.includes('barajas')) {
+    return 'aeropuerto';
+  }
+  const estacionesNombres = ['atocha', 'chamartín', 'américa', 'méndez álvaro', 'méndez alvaro', 'ifema'];
+  if (estacionesNombres.some(s => nombre.includes(s))) {
+    return 'estacion';
+  }
+
+  // 2. Comprobar por distancia
   if (distanciaKm(origen, AIRPORT_COORDS) <= AIRPORT_RADIUS_KM) {
     return 'aeropuerto';
   }
-
-  // Comprobar estaciones
   for (let st of STATION_COORDS) {
     if (distanciaKm(origen, st) <= STATION_RADIUS_KM) {
       return 'estacion';
@@ -338,11 +343,12 @@ function detectarOrigen() {
 // ESTADO GLOBAL
 // ═══════════════════════════════════════════
 let map, myMarker, accCircle, destMarker, origMarker, routeLayer;
-let myPos = null, origPos = null, destPos = null, routeKm = null, routeDurMin = null;
+let myPos = null, origPos = null, origName = ''; // <-- nuevo campo para el nombre del origen
+let destPos = null, routeKm = null, routeDurMin = null;
 let watchId = null, currentUser = null, lastSaved = 0;
 let tarifaKey = 't1', fullscreen = false;
 let fetchingRoute = false, routeFetchTimeout = null, lastRouteKm = null, isFlying = false;
-let lastMyPos = null, acFocus = 'dest'; // 'orig' o 'dest'
+let lastMyPos = null, acFocus = 'dest';
 const GPS_THRESHOLD_M = 15;
 const SAVE_MS = 10000;
 
@@ -495,7 +501,8 @@ function onPos(pos){
     reverseGeocode(lat, lng).then(addr=>{
       const inp = document.getElementById('orig-input');
       if(!origPos && inp.value === '') inp.value = addr;
-      // Actualizar tarifas según nuevo origen
+      // Guardar el nombre para detección por texto
+      origName = addr;
       actualizarChipsOrigen();
     });
   } else {
@@ -508,7 +515,6 @@ function onPos(pos){
   myPos = newPos;
   if(moved){
     lastMyPos = newPos;
-    // Si el origen es el GPS (no manual), recalcular ruta
     if(!origPos && destPos) scheduleFetchRoute();
     // Actualizar tarifas si el origen cambia por GPS
     actualizarChipsOrigen();
@@ -527,7 +533,9 @@ async function reverseGeocode(lat, lng){
     const d = await r.json();
     if(d.address){
       const a = d.address;
-      return [a.road, a.house_number].filter(Boolean).join(' ') || d.display_name.split(',')[0];
+      const nombre = [a.road, a.house_number].filter(Boolean).join(' ') || d.display_name.split(',')[0];
+      origName = nombre; // guardar para detección
+      return nombre;
     }
   } catch(e){}
   return 'Mi ubicación';
@@ -567,14 +575,14 @@ function pickOrigAC(lat, lon, name){
   document.getElementById('btn-clear-orig').style.display='block';
   document.getElementById('ac-list').style.display='none';
   origPos = { lat: parseFloat(lat), lng: parseFloat(lon) };
+  origName = label; // guardar nombre para detección
   // Mover marcador GPS al origen manual
   const ll=[origPos.lat, origPos.lng];
   const icon = L.divIcon({ className:'', html:'<div class="my-dot"></div>', iconSize:[16,16], iconAnchor:[8,8] });
   if(myMarker){ myMarker.setLatLng(ll); if(accCircle) accCircle.setLatLng(ll); }
   else { myMarker = L.marker(ll,{icon,zIndexOffset:1000}).addTo(map).bindPopup(`<b>${label}</b>`,{closeButton:false}); }
-  lastRouteKm = null; // forzar recálculo completo
-  // Actualizar chips de tarifa según nuevo origen
-  actualizarChipsOrigen();
+  lastRouteKm = null;
+  actualizarChipsOrigen(); // actualizar chips según nuevo origen
   if(destPos) scheduleFetchRoute();
 }
 function clearOrig(){
@@ -582,6 +590,7 @@ function clearOrig(){
   document.getElementById('btn-clear-orig').style.display='none';
   document.getElementById('ac-list').style.display='none';
   origPos = null;
+  origName = ''; // resetear nombre
   // Volver el marcador a GPS si disponible
   if(myPos && myMarker){ myMarker.setLatLng([myPos.lat,myPos.lng]); if(accCircle) accCircle.setLatLng([myPos.lat,myPos.lng]); }
   lastRouteKm = null;
@@ -662,6 +671,8 @@ function setDest(lat, lng, name){
   if(!myPos){
     map.setView([lat,lng], 14);
   }
+  // Reevaluar tarifas porque la elección T4/T3 depende del destino
+  actualizarChipsOrigen();
   scheduleFetchRoute();
 }
 
@@ -759,7 +770,7 @@ async function fetchRoute(){
 function actualizarChipsOrigen() {
   const tipo = detectarOrigen();
   const chips = document.querySelectorAll('.chip');
-  // Ocultar todos y luego mostrar los que correspondan
+  // Ocultar todos
   chips.forEach(c => c.classList.add('hidden'));
 
   let tarifaPorDefecto = 't1';
@@ -768,8 +779,6 @@ function actualizarChipsOrigen() {
     document.querySelector('.chip[data-key="t4"]').classList.remove('hidden');
     document.querySelector('.chip[data-key="t3"]').classList.remove('hidden');
     // Determinar si el destino está dentro de la M-30 (aproximado)
-    // Por simplicidad, si el destino existe y está cerca del centro, t4; si no, t3.
-    // Aquí usamos una heurística: si el destino está a menos de 8 km del centro aproximado (Puerta del Sol), consideramos dentro de M-30.
     const centroM30 = { lat: 40.4168, lng: -3.7038 };
     if (destPos && distanciaKm(destPos, centroM30) <= 8) {
       tarifaPorDefecto = 't4';
@@ -777,14 +786,12 @@ function actualizarChipsOrigen() {
       tarifaPorDefecto = 't3';
     }
   } else if (tipo === 'estacion') {
-    // Mostrar solo t7
     document.querySelector('.chip[data-key="t7"]').classList.remove('hidden');
     tarifaPorDefecto = 't7';
   } else {
-    // ciudad: mostrar t1 y t2
+    // ciudad
     document.querySelector('.chip[data-key="t1"]').classList.remove('hidden');
     document.querySelector('.chip[data-key="t2"]').classList.remove('hidden');
-    // Seleccionar t1 o t2 según hora (igual que antes)
     const esDiurno = esHorarioDiurno();
     tarifaPorDefecto = esDiurno ? 't1' : 't2';
   }
@@ -795,7 +802,6 @@ function actualizarChipsOrigen() {
     document.querySelectorAll('.chip.active').forEach(c => c.classList.remove('active'));
     chipActivo.classList.add('active');
     tarifaKey = tarifaPorDefecto;
-    // Recalcular precio si hay ruta
     if (routeKm != null) calcPrice();
   }
 }
