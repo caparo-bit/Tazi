@@ -10,12 +10,12 @@
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%;font-family:'Inter',sans-serif;overflow:hidden}
     :root{
-      --blue:#1a73e8;--blue2:#4285f4;--red:#ea4335;--green:#34a853;
-      --text:#202124;--muted:#5f6368;--border:#e0e0e0;--bg:#f5f5f5;
+      --blue:#1a73e8; --blue2:#4285f4; --red:#ea4335; --green:#34a853;
+      --text:#202124; --muted:#5f6368; --border:#e0e0e0; --bg:#f5f5f5;
       --sh:0 1px 4px rgba(0,0,0,.2),0 4px 12px rgba(0,0,0,.1);
       --sh2:0 2px 8px rgba(0,0,0,.25),0 8px 28px rgba(0,0,0,.15);
-      --auth-bg:#0f1117;--auth-s:#1a1a2e;--auth-b:#2a2a45;
-      --teal:#3ecf8e;--teal-d:rgba(62,207,142,.12);--err:#f87171;--muted2:#6b7280;
+      --auth-bg:#0f1117; --auth-s:#1a1a2e; --auth-b:#2a2a45;
+      --teal:#3ecf8e; --teal-d:rgba(62,207,142,.12); --err:#f87171; --muted2:#6b7280;
     }
 
     /* ═══ AUTH ═══ */
@@ -122,6 +122,7 @@
     .chip{padding:.32rem .75rem;border-radius:20px;font-size:.76rem;font-weight:500;border:1.5px solid var(--border);color:var(--muted);cursor:pointer;background:white;transition:all .15s;white-space:nowrap}
     .chip:hover{border-color:var(--blue);color:var(--blue)}
     .chip.active{background:var(--blue);border-color:var(--blue);color:white}
+    .chip.hidden{display:none}
 
     /* Precio */
     #price-card{display:none;margin-top:.6rem}
@@ -251,12 +252,12 @@
 
     <div id="tarifa-section" class="section">
       <div class="section-title">Tarifa oficial Madrid 2026</div>
-      <div class="chips">
-        <button class="chip active"  onclick="setTarifa('t1',this)">T1 · Día</button>
-        <button class="chip"         onclick="setTarifa('t2',this)">T2 · Noche/Fest.</button>
-        <button class="chip"         onclick="setTarifa('t4',this)">✈️ Apto→M30</button>
-        <button class="chip"         onclick="setTarifa('t3',this)">✈️ Apto→fuera M30</button>
-        <button class="chip"         onclick="setTarifa('t7',this)">🚉 Estaciones/IFEMA</button>
+      <div class="chips" id="chips-container">
+        <button class="chip" data-key="t1" onclick="setTarifa('t1',this)">T1 · Día</button>
+        <button class="chip" data-key="t2" onclick="setTarifa('t2',this)">T2 · Noche/Fest.</button>
+        <button class="chip" data-key="t4" onclick="setTarifa('t4',this)">✈️ Apto→M30</button>
+        <button class="chip" data-key="t3" onclick="setTarifa('t3',this)">✈️ Apto→fuera M30</button>
+        <button class="chip" data-key="t7" onclick="setTarifa('t7',this)">🚉 Estaciones/IFEMA</button>
       </div>
       <div id="price-card"></div>
     </div>
@@ -291,6 +292,47 @@ const TARIFAS = {
   t3: { id:'T3', nombre:'Aeropuerto → fuera M-30', horario:'24h · 365 días', tipo:'minimo_luego_metro', minimo:22.00, franquicia_km:9.0, km_t1:1.40, km_t2:1.60, nota:'Mínimo 22 € cubre los primeros 9 km. Superados, el taxímetro sigue en T1 (día) o T2 (noche/fest).' },
   t7: { id:'T7', nombre:'Estaciones y IFEMA', horario:'24h · 365 días', tipo:'salida_especial', salida:8.00, franquicia_m:1450, km:1.40, km_noche:1.60, nota:'Salida desde: Atocha · Chamartín · Av. América · Méndez Álvaro · IFEMA.\n8 € incluye los primeros 1.450 m. Luego T1 (día) o T2 (noche/fest).' }
 };
+
+// ═══════════════════════════════════════════
+// DETECCIÓN DE ORIGEN (AEROPUERTO / ESTACIONES)
+// ═══════════════════════════════════════════
+const AIRPORT_COORDS = { lat: 40.4722, lng: -3.5604 }; // Centro aproximado del aeropuerto
+const AIRPORT_RADIUS_KM = 2.0; // 2 km de radio
+const STATION_COORDS = [
+  { lat: 40.4060, lng: -3.6897 }, // Atocha
+  { lat: 40.4729, lng: -3.6823 }, // Chamartín
+  { lat: 40.4379, lng: -3.6774 }, // Av. América
+  { lat: 40.4011, lng: -3.6787 }, // Méndez Álvaro
+  { lat: 40.4695, lng: -3.5988 }  // IFEMA
+];
+const STATION_RADIUS_KM = 0.8; // 800 m de radio
+
+function distanciaKm(a, b) {
+  const R = 6371;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLng = (b.lng - a.lng) * Math.PI / 180;
+  const sin2 = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.asin(Math.sqrt(sin2));
+}
+
+function detectarOrigen() {
+  const origen = origPos || myPos;
+  if (!origen) return 'ciudad'; // por defecto
+
+  // Comprobar aeropuerto
+  if (distanciaKm(origen, AIRPORT_COORDS) <= AIRPORT_RADIUS_KM) {
+    return 'aeropuerto';
+  }
+
+  // Comprobar estaciones
+  for (let st of STATION_COORDS) {
+    if (distanciaKm(origen, st) <= STATION_RADIUS_KM) {
+      return 'estacion';
+    }
+  }
+
+  return 'ciudad';
+}
 
 // ═══════════════════════════════════════════
 // ESTADO GLOBAL
@@ -419,7 +461,6 @@ function toggleFull(){
 // GPS
 // ═══════════════════════════════════════════
 
-// FIX 1: distancia en metros entre dos coordenadas (Haversine simplificado)
 function distMetros(a, b){
   const R = 6371000;
   const dLat = (b.lat - a.lat) * Math.PI / 180;
@@ -453,8 +494,9 @@ function onPos(pos){
     // Rellenar campo origen con dirección aproximada
     reverseGeocode(lat, lng).then(addr=>{
       const inp = document.getElementById('orig-input');
-      // Solo rellenar si el usuario no ha escrito nada ya
       if(!origPos && inp.value === '') inp.value = addr;
+      // Actualizar tarifas según nuevo origen
+      actualizarChipsOrigen();
     });
   } else {
     myMarker.setLatLng(ll);
@@ -468,6 +510,8 @@ function onPos(pos){
     lastMyPos = newPos;
     // Si el origen es el GPS (no manual), recalcular ruta
     if(!origPos && destPos) scheduleFetchRoute();
+    // Actualizar tarifas si el origen cambia por GPS
+    actualizarChipsOrigen();
   }
 
   const now = Date.now();
@@ -529,6 +573,8 @@ function pickOrigAC(lat, lon, name){
   if(myMarker){ myMarker.setLatLng(ll); if(accCircle) accCircle.setLatLng(ll); }
   else { myMarker = L.marker(ll,{icon,zIndexOffset:1000}).addTo(map).bindPopup(`<b>${label}</b>`,{closeButton:false}); }
   lastRouteKm = null; // forzar recálculo completo
+  // Actualizar chips de tarifa según nuevo origen
+  actualizarChipsOrigen();
   if(destPos) scheduleFetchRoute();
 }
 function clearOrig(){
@@ -539,6 +585,7 @@ function clearOrig(){
   // Volver el marcador a GPS si disponible
   if(myPos && myMarker){ myMarker.setLatLng([myPos.lat,myPos.lng]); if(accCircle) accCircle.setLatLng([myPos.lat,myPos.lng]); }
   lastRouteKm = null;
+  actualizarChipsOrigen();
   if(destPos) scheduleFetchRoute();
 }
 
@@ -630,13 +677,11 @@ function scheduleFetchRoute(){
 }
 
 async function fetchRoute(){
-  // Usar origen manual si está establecido, si no el GPS
   const origen = origPos || myPos;
   if(!origen || !destPos) return;
   if(fetchingRoute) return;
   fetchingRoute = true;
 
-  // FIX 2: Solo mostrar "cargando" y ocultar cards en la PRIMERA carga
   const isFirstLoad = (lastRouteKm === null);
   if(isFirstLoad){
     document.getElementById('no-dest').style.display='none';
@@ -645,7 +690,6 @@ async function fetchRoute(){
     document.getElementById('price-card').style.display='none';
     document.getElementById('route-loading').style.display='block';
   }
-  // En actualizaciones posteriores no tocamos la visibilidad de los cards
 
   try{
     const url = `https://router.project-osrm.org/route/v1/driving/${origen.lng},${origen.lat};${destPos.lng},${destPos.lat}?overview=full&geometries=geojson`;
@@ -654,11 +698,10 @@ async function fetchRoute(){
     const route = d.routes[0];
     const newKm = route.distance / 1000;
 
-    // Si la distancia cambia menos de 50m, solo actualizamos tiempo y precio sin tocar el DOM estructural
     if(lastRouteKm !== null && Math.abs(newKm - lastRouteKm) < 0.05){
       routeDurMin = Math.round(route.duration/60);
       document.getElementById('route-time').textContent = '~'+routeDurMin+' min';
-      calcPrice(); // FIX 3: calcPrice es seguro (usa setHTML solo si cambia)
+      calcPrice();
       fetchingRoute = false;
       return;
     }
@@ -679,7 +722,6 @@ async function fetchRoute(){
       }).addTo(map);
     }
 
-    // Ajustar vista solo si la ruta no cabe en la pantalla o el zoom es muy bajo
     const bounds = routeLayer.getBounds();
     const mapBounds = map.getBounds();
     if(!mapBounds.contains(bounds) || map.getZoom() < 13){
@@ -712,6 +754,53 @@ async function fetchRoute(){
 }
 
 // ═══════════════════════════════════════════
+// ACTUALIZACIÓN DE CHIPS SEGÚN ORIGEN
+// ═══════════════════════════════════════════
+function actualizarChipsOrigen() {
+  const tipo = detectarOrigen();
+  const chips = document.querySelectorAll('.chip');
+  // Ocultar todos y luego mostrar los que correspondan
+  chips.forEach(c => c.classList.add('hidden'));
+
+  let tarifaPorDefecto = 't1';
+  if (tipo === 'aeropuerto') {
+    // Mostrar solo t4 y t3
+    document.querySelector('.chip[data-key="t4"]').classList.remove('hidden');
+    document.querySelector('.chip[data-key="t3"]').classList.remove('hidden');
+    // Determinar si el destino está dentro de la M-30 (aproximado)
+    // Por simplicidad, si el destino existe y está cerca del centro, t4; si no, t3.
+    // Aquí usamos una heurística: si el destino está a menos de 8 km del centro aproximado (Puerta del Sol), consideramos dentro de M-30.
+    const centroM30 = { lat: 40.4168, lng: -3.7038 };
+    if (destPos && distanciaKm(destPos, centroM30) <= 8) {
+      tarifaPorDefecto = 't4';
+    } else {
+      tarifaPorDefecto = 't3';
+    }
+  } else if (tipo === 'estacion') {
+    // Mostrar solo t7
+    document.querySelector('.chip[data-key="t7"]').classList.remove('hidden');
+    tarifaPorDefecto = 't7';
+  } else {
+    // ciudad: mostrar t1 y t2
+    document.querySelector('.chip[data-key="t1"]').classList.remove('hidden');
+    document.querySelector('.chip[data-key="t2"]').classList.remove('hidden');
+    // Seleccionar t1 o t2 según hora (igual que antes)
+    const esDiurno = esHorarioDiurno();
+    tarifaPorDefecto = esDiurno ? 't1' : 't2';
+  }
+
+  // Activar la tarifa por defecto
+  const chipActivo = document.querySelector(`.chip[data-key="${tarifaPorDefecto}"]`);
+  if (chipActivo) {
+    document.querySelectorAll('.chip.active').forEach(c => c.classList.remove('active'));
+    chipActivo.classList.add('active');
+    tarifaKey = tarifaPorDefecto;
+    // Recalcular precio si hay ruta
+    if (routeKm != null) calcPrice();
+  }
+}
+
+// ═══════════════════════════════════════════
 // CÁLCULO DE PRECIO
 // ═══════════════════════════════════════════
 function esHorarioDiurno(){
@@ -731,7 +820,6 @@ function setTarifa(key, el){
 
 function fmt(n){ return n.toFixed(2)+' €'; }
 
-// FIX 3: helper que solo escribe el DOM si el contenido cambia realmente
 function setHTML(el, html){
   if(el.innerHTML !== html) el.innerHTML = html;
 }
