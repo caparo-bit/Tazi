@@ -1508,8 +1508,8 @@ document.addEventListener('click', e=>{
 // ═══════════════════════════════════════════
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/Tazi/sw.js')
-      .then(() => console.log('SW registrado correctamente'))
+    navigator.serviceWorker.register('sw.js')
+      .then(() => console.log('SW registrado'))
       .catch(err => console.warn('SW error:', err));
   });
 }
