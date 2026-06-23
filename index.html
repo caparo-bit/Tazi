@@ -1506,7 +1506,7 @@ document.addEventListener('click', e=>{
 // ═══════════════════════════════════════════
 // SERVICE WORKER (PWA)
 // ═══════════════════════════════════════════
-iif ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/Tazi/sw.js')
       .then(() => console.log('SW registrado correctamente'))
