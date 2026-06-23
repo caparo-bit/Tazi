@@ -19,21 +19,139 @@
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: 'Inter', sans-serif; background: #0f1117; color: #e8e8f0; height: 100vh; overflow: hidden; }
-    #login-conductor { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; gap: 1rem; background: #0f1117; }
-    #login-conductor h1 { font-size: 1.8rem; color: #3ecf8e; }
-    #login-conductor input { padding: 0.8rem 1rem; border-radius: 10px; border: 1px solid #2a2a45; background: rgba(255,255,255,0.05); color: white; width: 280px; font-size: 1rem; }
-    #login-conductor button { padding: 0.8rem 2rem; border-radius: 10px; background: #3ecf8e; color: #0f1117; font-weight: 700; border: none; cursor: pointer; width: 280px; font-size: 1rem; }
-    #login-conductor .error { color: #f87171; font-size: 0.9rem; }
-    #app-conductor { display: none; flex-direction: column; height: 100vh; }
+
+    /* ── Pantalla de autenticación ── */
+    #auth-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      padding: 1.5rem;
+      background: #0f1117;
+    }
+    #auth-screen h1 {
+      font-size: 2rem;
+      color: #3ecf8e;
+      margin-bottom: 1rem;
+    }
+    #auth-screen .tabs {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    #auth-screen .tabs button {
+      background: transparent;
+      border: none;
+      color: #6b7280;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: 0.2s;
+    }
+    #auth-screen .tabs button.active {
+      color: #3ecf8e;
+      border-bottom-color: #3ecf8e;
+    }
+    #auth-screen .form {
+      display: none;
+      flex-direction: column;
+      gap: 0.8rem;
+      width: 100%;
+      max-width: 320px;
+    }
+    #auth-screen .form.active {
+      display: flex;
+    }
+    #auth-screen input {
+      padding: 0.8rem 1rem;
+      border-radius: 10px;
+      border: 1px solid #2a2a45;
+      background: rgba(255,255,255,0.05);
+      color: white;
+      font-size: 1rem;
+      width: 100%;
+    }
+    #auth-screen input::placeholder { color: #6b7280; }
+    #auth-screen .btn-primary {
+      padding: 0.8rem;
+      border-radius: 10px;
+      background: #3ecf8e;
+      color: #0f1117;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: 0.2s;
+    }
+    #auth-screen .btn-primary:hover { opacity: 0.85; }
+    #auth-screen .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    #auth-screen .error-msg {
+      color: #f87171;
+      font-size: 0.85rem;
+      margin-top: 0.3rem;
+      text-align: center;
+    }
+    #auth-screen .success-msg {
+      color: #34d399;
+      font-size: 0.85rem;
+      margin-top: 0.3rem;
+      text-align: center;
+    }
+
+    /* ── App principal ── */
+    #app-conductor {
+      display: none;
+      flex-direction: column;
+      height: 100vh;
+    }
     #map { height: 50vh; width: 100%; }
-    #lista-solicitudes { flex: 1; overflow-y: auto; padding: 1rem; background: #1a1a2e; }
-    .solicitud-item { background: #2a2a45; border-radius: 12px; padding: 0.8rem 1rem; margin-bottom: 0.6rem; border: 1px solid #3a3a5a; }
-    .solicitud-item .info { display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.9rem; }
+    #lista-solicitudes {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      background: #1a1a2e;
+    }
+    .solicitud-item {
+      background: #2a2a45;
+      border-radius: 12px;
+      padding: 0.8rem 1rem;
+      margin-bottom: 0.6rem;
+      border: 1px solid #3a3a5a;
+    }
+    .solicitud-item .info {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+    }
     .solicitud-item .precio { color: #fbbc04; font-weight: 700; }
     .solicitud-item .distancia { color: #34a853; }
-    .solicitud-item button { background: #34a853; color: white; border: none; border-radius: 8px; padding: 0.4rem 1rem; cursor: pointer; font-weight: 600; margin-top: 0.4rem; }
+    .solicitud-item button {
+      background: #34a853;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.4rem 1rem;
+      cursor: pointer;
+      font-weight: 600;
+      margin-top: 0.4rem;
+    }
     .solicitud-item button:hover { background: #2d9248; }
-    #btn-logout { position: fixed; top: 10px; right: 10px; z-index: 1000; background: rgba(255,255,255,0.1); border: 1px solid #2a2a45; color: #e8e8f0; padding: 0.3rem 0.8rem; border-radius: 20px; cursor: pointer; }
+    #btn-logout {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid #2a2a45;
+      color: #e8e8f0;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      cursor: pointer;
+    }
     .leaflet-popup-content-wrapper { border-radius: 12px; background: #1a1a2e; color: white; }
     .leaflet-popup-tip { background: #1a1a2e; }
     .leaflet-control-zoom a { color: white !important; background: #2a2a45 !important; }
@@ -41,16 +159,36 @@
 </head>
 <body>
 
-  <!-- Pantalla de login -->
-  <div id="login-conductor">
+  <!-- ═══ Pantalla de autenticación ═══ -->
+  <div id="auth-screen">
     <h1>🚖 Conductores</h1>
-    <input id="email" type="email" placeholder="tu@email.com" />
-    <input id="password" type="password" placeholder="Contraseña" />
-    <button onclick="loginConductor()">Iniciar sesión</button>
-    <div id="error-msg" class="error"></div>
+    <div class="tabs">
+      <button id="tab-login" class="active" onclick="mostrarForm('login')">Iniciar sesión</button>
+      <button id="tab-register" onclick="mostrarForm('register')">Registrarse</button>
+    </div>
+
+    <!-- Formulario de login -->
+    <div id="form-login" class="form active">
+      <input id="login-email" type="email" placeholder="Email" />
+      <input id="login-password" type="password" placeholder="Contraseña" />
+      <button class="btn-primary" onclick="loginConductor()">Iniciar sesión</button>
+      <div id="login-error" class="error-msg"></div>
+    </div>
+
+    <!-- Formulario de registro -->
+    <div id="form-register" class="form">
+      <input id="reg-nombre" type="text" placeholder="Nombre completo" />
+      <input id="reg-email" type="email" placeholder="Email" />
+      <input id="reg-telefono" type="tel" placeholder="Teléfono" />
+      <input id="reg-vehiculo" type="text" placeholder="Vehículo (ej. Toyota Prius)" />
+      <input id="reg-password" type="password" placeholder="Contraseña (mínimo 6 caracteres)" />
+      <button class="btn-primary" onclick="registerConductor()">Registrarse</button>
+      <div id="register-error" class="error-msg"></div>
+      <div id="register-success" class="success-msg"></div>
+    </div>
   </div>
 
-  <!-- App principal -->
+  <!-- ═══ App principal ═══ -->
   <div id="app-conductor">
     <div id="map"></div>
     <div id="lista-solicitudes">
@@ -63,7 +201,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     // ═══════════════════════════════════════════
-    // CONFIGURACIÓN SUPABASE (usa tus credenciales)
+    // CONFIGURACIÓN SUPABASE
     // ═══════════════════════════════════════════
     const SB_URL = 'https://ejbvfirfodfktekgpwkm.supabase.co';
     const SB_KEY = 'sb_publishable_ZNwpPu1uqxZfKWOU6FDgbQ_0sLhGrXt';
@@ -76,22 +214,117 @@
     let watchId = null;
 
     // ═══════════════════════════════════════════
-    // LOGIN
+    // UI: TABS
+    // ═══════════════════════════════════════════
+    function mostrarForm(tipo) {
+      document.getElementById('form-login').classList.toggle('active', tipo === 'login');
+      document.getElementById('form-register').classList.toggle('active', tipo === 'register');
+      document.getElementById('tab-login').classList.toggle('active', tipo === 'login');
+      document.getElementById('tab-register').classList.toggle('active', tipo === 'register');
+      // Limpiar mensajes
+      document.getElementById('login-error').textContent = '';
+      document.getElementById('register-error').textContent = '';
+      document.getElementById('register-success').textContent = '';
+    }
+
+    // ═══════════════════════════════════════════
+    // REGISTRO DE CONDUCTOR
+    // ═══════════════════════════════════════════
+    async function registerConductor() {
+      const nombre = document.getElementById('reg-nombre').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const telefono = document.getElementById('reg-telefono').value.trim();
+      const vehiculo = document.getElementById('reg-vehiculo').value.trim();
+      const password = document.getElementById('reg-password').value;
+      const errorDiv = document.getElementById('register-error');
+      const successDiv = document.getElementById('register-success');
+      const btn = document.querySelector('#form-register .btn-primary');
+
+      // Limpiar mensajes
+      errorDiv.textContent = '';
+      successDiv.textContent = '';
+
+      // Validaciones básicas
+      if (!nombre || !email || !telefono || !vehiculo || !password) {
+        errorDiv.textContent = 'Todos los campos son obligatorios.';
+        return;
+      }
+      if (password.length < 6) {
+        errorDiv.textContent = 'La contraseña debe tener al menos 6 caracteres.';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Registrando...';
+
+      try {
+        // 1. Crear usuario en Supabase Auth
+        const { data: authData, error: authError } = await sb.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { nombre, telefono, vehiculo } // datos extra (opcional)
+          }
+        });
+
+        if (authError) throw new Error(authError.message);
+
+        if (!authData.user) {
+          throw new Error('No se pudo crear el usuario. Intenta de nuevo.');
+        }
+
+        // 2. Esperar un momento para que el trigger cree el perfil (por defecto 'usuario')
+        //    y luego actualizar el rol a 'conductor' con los datos adicionales
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        const { error: updateError } = await sb
+          .from('perfiles')
+          .update({
+            rol: 'conductor',
+            nombre: nombre,
+            telefono: telefono,
+            vehiculo: vehiculo
+          })
+          .eq('id', authData.user.id);
+
+        if (updateError) throw new Error(updateError.message);
+
+        // Éxito
+        successDiv.textContent = '✅ Conductor registrado correctamente. Ahora inicia sesión.';
+        // Limpiar campos
+        document.getElementById('reg-nombre').value = '';
+        document.getElementById('reg-email').value = '';
+        document.getElementById('reg-telefono').value = '';
+        document.getElementById('reg-vehiculo').value = '';
+        document.getElementById('reg-password').value = '';
+        // Cambiar a login
+        setTimeout(() => mostrarForm('login'), 1500);
+
+      } catch (err) {
+        errorDiv.textContent = '❌ ' + err.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Registrarse';
+      }
+    }
+
+    // ═══════════════════════════════════════════
+    // LOGIN DE CONDUCTOR
     // ═══════════════════════════════════════════
     async function loginConductor() {
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-      const errorDiv = document.getElementById('error-msg');
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const errorDiv = document.getElementById('login-error');
       errorDiv.textContent = '';
 
       if (!email || !password) {
-        errorDiv.textContent = 'Completa todos los campos';
+        errorDiv.textContent = 'Completa todos los campos.';
         return;
       }
 
       try {
         const { data, error } = await sb.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        if (error) throw new Error(error.message);
 
         // Verificar rol
         const { data: perfil, error: perfilError } = await sb
@@ -102,27 +335,31 @@
 
         if (perfilError || perfil.rol !== 'conductor') {
           await sb.auth.signOut();
-          throw new Error('No tienes permisos de conductor');
+          throw new Error('No tienes permisos de conductor.');
         }
 
         currentUser = data.user;
-        document.getElementById('login-conductor').style.display = 'none';
+        document.getElementById('auth-screen').style.display = 'none';
         document.getElementById('app-conductor').style.display = 'flex';
         iniciarMapa();
         iniciarGPS();
         cargarSolicitudes();
         suscribirSolicitudes();
+
       } catch (err) {
-        errorDiv.textContent = err.message;
+        errorDiv.textContent = '❌ ' + err.message;
       }
     }
 
+    // ═══════════════════════════════════════════
+    // LOGOUT
+    // ═══════════════════════════════════════════
     function logout() {
       if (watchId) navigator.geolocation.clearWatch(watchId);
       if (channel) sb.removeChannel(channel);
       sb.auth.signOut();
       currentUser = null;
-      document.getElementById('login-conductor').style.display = 'flex';
+      document.getElementById('auth-screen').style.display = 'flex';
       document.getElementById('app-conductor').style.display = 'none';
     }
 
@@ -194,7 +431,7 @@
 
       container.innerHTML = lista.map(s => {
         const dist = distanciaKm(conductorPos.lat, conductorPos.lng, s.origen_lat, s.origen_lng);
-        const tiempo = Math.round((dist / 30) * 60); // 30 km/h
+        const tiempo = Math.round((dist / 30) * 60);
         return `
           <div class="solicitud-item" data-id="${s.id}">
             <div class="info">
@@ -257,17 +494,15 @@
     }
 
     // ═══════════════════════════════════════════
-    // INICIO
+    // SESIÓN ACTIVA (auto-login)
     // ═══════════════════════════════════════════
-    // Si ya hay sesión activa (por ejemplo, después de un refresh)
     sb.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        // Verificar rol y redirigir automáticamente
         sb.from('perfiles').select('rol').eq('id', session.user.id).single()
           .then(({ data }) => {
             if (data?.rol === 'conductor') {
               currentUser = session.user;
-              document.getElementById('login-conductor').style.display = 'none';
+              document.getElementById('auth-screen').style.display = 'none';
               document.getElementById('app-conductor').style.display = 'flex';
               iniciarMapa();
               iniciarGPS();
