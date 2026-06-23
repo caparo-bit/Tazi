@@ -2,196 +2,565 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+
+  <!-- ═══ VIEWPORT + PWA META ═══ -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+  <meta name="format-detection" content="telephone=no"/>
+
+  <!-- Android / Chrome -->
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="application-name" content="Tazi"/>
+  <meta name="theme-color" content="#0f1117"/>
+
+  <!-- iOS / Safari -->
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Tazi"/>
+
+  <!-- Windows -->
+  <meta name="msapplication-TileColor" content="#0f1117"/>
+  <meta name="msapplication-tap-highlight" content="no"/>
+
   <title>Tazi · Madrid</title>
 
   <!-- Manifest PWA -->
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="manifest.json"/>
 
-  <!-- Iconos para la instalación -->
-  <link rel="apple-touch-icon" href="icon-192.png">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Tazi">
-  <meta name="theme-color" content="#0f1117">
+  <!-- Iconos -->
+  <link rel="apple-touch-icon" href="icon-192.png"/>
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-192.png"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
   <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html,body{height:100%;font-family:'Inter',sans-serif;overflow:hidden}
-    :root{
-      --blue:#1a73e8; --blue2:#4285f4; --red:#ea4335; --green:#34a853;
-      --text:#202124; --muted:#5f6368; --border:#e0e0e0; --bg:#f5f5f5;
-      --sh:0 1px 4px rgba(0,0,0,.2),0 4px 12px rgba(0,0,0,.1);
-      --sh2:0 2px 8px rgba(0,0,0,.25),0 8px 28px rgba(0,0,0,.15);
-      --auth-bg:#0f1117; --auth-s:#1a1a2e; --auth-b:#2a2a45;
-      --teal:#3ecf8e; --teal-d:rgba(62,207,142,.12); --err:#f87171; --muted2:#6b7280;
+    /* ═══ RESET + BASE ═══ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+    }
+
+    html {
+      height: 100%;
+      height: -webkit-fill-available;
+    }
+
+    body {
+      height: 100%;
+      height: -webkit-fill-available;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+      overscroll-behavior: none;
+      -webkit-overflow-scrolling: touch;
+      touch-action: manipulation;
+      background: #0f1117;
+    }
+
+    :root {
+      --blue: #1a73e8;
+      --blue2: #4285f4;
+      --red: #ea4335;
+      --green: #34a853;
+      --text: #202124;
+      --muted: #5f6368;
+      --border: #e0e0e0;
+      --bg: #f5f5f5;
+      --sh: 0 1px 4px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.1);
+      --sh2: 0 2px 8px rgba(0,0,0,.25), 0 8px 28px rgba(0,0,0,.15);
+      --auth-bg: #0f1117;
+      --auth-s: #1a1a2e;
+      --auth-b: #2a2a45;
+      --teal: #3ecf8e;
+      --teal-d: rgba(62,207,142,.12);
+      --err: #f87171;
+      --muted2: #6b7280;
+      /* Safe areas */
+      --sat: env(safe-area-inset-top, 0px);
+      --sar: env(safe-area-inset-right, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+      --sal: env(safe-area-inset-left, 0px);
     }
 
     /* ═══ AUTH ═══ */
-    #screen-auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;background:var(--auth-bg);position:relative;overflow:hidden}
-    #screen-auth::before{content:'';position:fixed;top:-180px;left:50%;transform:translateX(-50%);width:600px;height:600px;background:radial-gradient(circle,rgba(62,207,142,.15) 0%,transparent 70%);pointer-events:none;animation:aupulse 4s ease-in-out infinite}
-    @keyframes aupulse{0%,100%{opacity:.6;transform:translateX(-50%) scale(1)}50%{opacity:1;transform:translateX(-50%) scale(1.06)}}
-    .card{position:relative;background:var(--auth-s);border:1px solid var(--auth-b);border-radius:16px;padding:2.5rem 2.25rem;width:100%;max-width:400px;box-shadow:0 0 0 1px rgba(62,207,142,.05),0 24px 60px rgba(0,0,0,.6)}
-    .brand{display:flex;align-items:center;gap:.6rem;margin-bottom:2rem}
-    .brand-icon{width:38px;height:38px;background:var(--teal-d);border:1px solid rgba(62,207,142,.3);border-radius:10px;display:flex;align-items:center;justify-content:center}
-    .brand-icon svg{width:20px;height:20px}
-    .brand-name{font-size:1.1rem;font-weight:700;color:#e8e8f0}
-    h1{font-size:1.4rem;font-weight:600;color:#e8e8f0;margin-bottom:.3rem}
-    .subtitle{font-size:.85rem;color:var(--muted2);margin-bottom:2rem}
-    label{display:block;font-size:.75rem;font-weight:600;color:var(--muted2);margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.04em}
-    .field{margin-bottom:1rem}
-    input[type="email"],input[type="password"]{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--auth-b);border-radius:9px;color:#e8e8f0;font-family:inherit;font-size:.9rem;padding:.7rem .9rem;outline:none;transition:border-color .2s,box-shadow .2s}
-    input[type="email"]:focus,input[type="password"]:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(62,207,142,.12)}
-    input[type="email"]::placeholder,input[type="password"]::placeholder{color:#3d3d5c}
-    .btn{display:block;width:100%;padding:.75rem;margin-top:1.25rem;background:var(--teal);color:#0f1117;font-family:inherit;font-size:.9rem;font-weight:700;border:none;border-radius:9px;cursor:pointer;transition:opacity .2s,transform .1s}
-    .btn:hover{opacity:.88}.btn:active{transform:scale(.98)}.btn:disabled{opacity:.4;cursor:not-allowed}
-    .btn-ghost{background:transparent;color:#e8e8f0;border:1px solid var(--auth-b);margin-top:.6rem}
-    .btn-ghost:hover{border-color:var(--teal);color:var(--teal);opacity:1}
-    .btn-demo{background:#4a4a6a;color:#fff;margin-top:.6rem}.btn-demo:hover{background:#5a5a7a}
-    .btn-install{background:var(--blue2);color:#fff;margin-top:.6rem;display:flex;align-items:center;justify-content:center;gap:.5rem}
-    .btn-install:hover{background:#1557b0}
-    .divider{display:flex;align-items:center;gap:.75rem;color:var(--muted2);font-size:.78rem;margin:1rem 0}
-    .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--auth-b)}
-    .footer-link{text-align:center;font-size:.82rem;color:var(--muted2);margin-top:1.25rem}
-    .footer-link a{color:var(--teal);text-decoration:none;font-weight:500}
-    .amsg{font-size:.82rem;padding:.65rem .85rem;border-radius:8px;margin-bottom:.75rem;display:none}
-    .amsg.error{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);color:var(--err)}
-    .amsg.success{background:var(--teal-d);border:1px solid rgba(62,207,142,.25);color:var(--teal)}
-    .amsg.show{display:block}
-    .sp{display:inline-block;width:13px;height:13px;border:2px solid rgba(15,17,23,.3);border-top-color:#0f1117;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:5px}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .view{display:none}.view.active{display:block}
+    #screen-auth {
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: calc(1.5rem + var(--sat)) 1.5rem calc(1.5rem + var(--sab));
+      background: var(--auth-bg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    #screen-auth::before {
+      content: '';
+      position: fixed;
+      top: -180px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(62,207,142,.15) 0%, transparent 70%);
+      pointer-events: none;
+      animation: aupulse 4s ease-in-out infinite;
+    }
+
+    @keyframes aupulse {
+      0%, 100% { opacity: .6; transform: translateX(-50%) scale(1); }
+      50% { opacity: 1; transform: translateX(-50%) scale(1.06); }
+    }
+
+    .card {
+      position: relative;
+      background: var(--auth-s);
+      border: 1px solid var(--auth-b);
+      border-radius: 16px;
+      padding: 2.5rem 2.25rem;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 0 0 1px rgba(62,207,142,.05), 0 24px 60px rgba(0,0,0,.6);
+    }
+
+    .brand { display: flex; align-items: center; gap: .6rem; margin-bottom: 2rem; }
+    .brand-icon {
+      width: 38px; height: 38px;
+      background: var(--teal-d);
+      border: 1px solid rgba(62,207,142,.3);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .brand-icon svg { width: 20px; height: 20px; }
+    .brand-name { font-size: 1.1rem; font-weight: 700; color: #e8e8f0; }
+
+    h1 { font-size: 1.4rem; font-weight: 600; color: #e8e8f0; margin-bottom: .3rem; }
+    .subtitle { font-size: .85rem; color: var(--muted2); margin-bottom: 2rem; }
+
+    label {
+      display: block;
+      font-size: .75rem;
+      font-weight: 600;
+      color: var(--muted2);
+      margin-bottom: .35rem;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .field { margin-bottom: 1rem; }
+
+    input[type="email"], input[type="password"] {
+      width: 100%;
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--auth-b);
+      border-radius: 9px;
+      color: #e8e8f0;
+      font-family: inherit;
+      font-size: .9rem;
+      padding: .7rem .9rem;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      /* Evita zoom en iOS al hacer focus */
+      font-size: 16px;
+    }
+
+    input[type="email"]:focus, input[type="password"]:focus {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px rgba(62,207,142,.12);
+    }
+
+    input[type="email"]::placeholder, input[type="password"]::placeholder { color: #3d3d5c; }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: .75rem;
+      margin-top: 1.25rem;
+      background: var(--teal);
+      color: #0f1117;
+      font-family: inherit;
+      font-size: .9rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+      -webkit-appearance: none;
+    }
+    .btn:hover { opacity: .88; }
+    .btn:active { transform: scale(.98); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    .btn-ghost {
+      background: transparent;
+      color: #e8e8f0;
+      border: 1px solid var(--auth-b);
+      margin-top: .6rem;
+    }
+    .btn-ghost:hover { border-color: var(--teal); color: var(--teal); opacity: 1; }
+
+    .btn-demo { background: #4a4a6a; color: #fff; margin-top: .6rem; }
+    .btn-demo:hover { background: #5a5a7a; }
+
+    .btn-install {
+      background: var(--blue2);
+      color: #fff;
+      margin-top: .6rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+    }
+    .btn-install:hover { background: #1557b0; }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      color: var(--muted2);
+      font-size: .78rem;
+      margin: 1rem 0;
+    }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--auth-b); }
+
+    .footer-link { text-align: center; font-size: .82rem; color: var(--muted2); margin-top: 1.25rem; }
+    .footer-link a { color: var(--teal); text-decoration: none; font-weight: 500; }
+
+    .amsg { font-size: .82rem; padding: .65rem .85rem; border-radius: 8px; margin-bottom: .75rem; display: none; }
+    .amsg.error { background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.25); color: var(--err); }
+    .amsg.success { background: var(--teal-d); border: 1px solid rgba(62,207,142,.25); color: var(--teal); }
+    .amsg.show { display: block; }
+
+    .sp {
+      display: inline-block;
+      width: 13px; height: 13px;
+      border: 2px solid rgba(15,17,23,.3);
+      border-top-color: #0f1117;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle;
+      margin-right: 5px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .view { display: none; }
+    .view.active { display: block; }
 
     /* ═══ MAPA SCREEN ═══ */
-    #screen-map{display:none;position:fixed;inset:0;flex-direction:column;background:var(--bg)}
-    #screen-map.active{display:flex}
-    #map-wrap{position:relative;height:55vh;min-height:260px;flex-shrink:0}
-    #map{width:100%;height:100%}
+    #screen-map {
+      display: none;
+      position: fixed;
+      inset: 0;
+      flex-direction: column;
+      background: var(--bg);
+      /* Padding para safe areas */
+      padding-top: var(--sat);
+    }
+    #screen-map.active { display: flex; }
+
+    #map-wrap {
+      position: relative;
+      height: 55vh;
+      min-height: 260px;
+      flex-shrink: 0;
+    }
+
+    #map { width: 100%; height: 100%; }
 
     /* Buscador */
-    #search-bar{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:500;width:calc(100% - 20px);max-width:420px;position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:500;width:calc(100% - 20px);max-width:420px}
-    #search-bar{top:10px}
-    .route-inputs{display:flex;flex-direction:column;gap:5px}
-    .sbox-orig{border-bottom:1px solid #f0f0f0}
-    .sbox-orig input{color:var(--muted)}
-    .orig-dot{width:10px;height:10px;background:#34a853;border:2px solid white;border-radius:50%;box-shadow:0 0 0 2px #34a853;flex-shrink:0}
-    .dest-dot{width:10px;height:10px;background:var(--red);border-radius:50%;flex-shrink:0}
-    .connector{width:1px;height:8px;background:#dadce0;margin-left:4px}
-    .sbox-wrap{display:flex;flex-direction:column;background:white;border-radius:18px;box-shadow:var(--sh2);overflow:visible}
-    .sbox-row{display:flex;align-items:center;padding:.45rem .75rem .45rem .9rem;gap:.55rem}
-    .sbox-row:first-child{border-bottom:1px solid #f0f0f0}
-    .sbox-row input{flex:1;border:none;outline:none;font-family:inherit;font-size:.88rem;color:var(--text);background:transparent}
-    .sbox-row input::placeholder{color:#9aa0a6}
-    .sbox-btn{background:var(--blue);color:white;border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.85rem}
-    .sbox-btn:hover{background:#1557b0}
-    .sbox-clear{background:none;border:none;cursor:pointer;color:var(--muted);font-size:.9rem;padding:2px 4px;line-height:1}
-    #ac-list{background:white;border-radius:14px;margin-top:6px;box-shadow:var(--sh2);overflow:hidden;display:none;position:absolute;width:100%;z-index:10}
-    .ac-item{padding:.6rem 1rem;font-size:.84rem;color:var(--text);cursor:pointer;border-bottom:1px solid #f0f0f0;display:flex;align-items:flex-start;gap:.6rem}
-    .ac-item:last-child{border-bottom:none}
-    .ac-item:hover{background:#f8f9fa}
-    .ac-ic{color:var(--muted);font-size:.85rem;padding-top:1px;flex-shrink:0}
-    .ac-name{font-weight:500;line-height:1.3}
-    .ac-sub{font-size:.73rem;color:var(--muted)}
+    #search-bar {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 500;
+      width: calc(100% - 20px);
+      max-width: 420px;
+    }
 
-    .map-fab{position:absolute;right:10px;z-index:500;background:white;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;box-shadow:var(--sh);display:flex;align-items:center;justify-content:center;font-size:1rem;transition:box-shadow .15s}
-    .map-fab:hover{box-shadow:var(--sh2)}
-    #btn-center{bottom:56px}
-    #btn-expand{bottom:10px}
-    #btn-logout{position:absolute;top:10px;right:10px;z-index:500;background:rgba(255,255,255,.9);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:20px;padding:.3rem .75rem;font-family:inherit;font-size:.74rem;color:var(--muted);cursor:pointer}
-    #btn-logout:hover{color:var(--red);border-color:var(--red)}
+    .sbox-wrap {
+      display: flex;
+      flex-direction: column;
+      background: white;
+      border-radius: 18px;
+      box-shadow: var(--sh2);
+      overflow: visible;
+    }
 
-    .my-dot{width:16px;height:16px;background:var(--blue2);border:2.5px solid white;border-radius:50%;box-shadow:0 0 0 5px rgba(66,133,244,.2);animation:glow 2s ease-in-out infinite}
-    @keyframes glow{0%,100%{box-shadow:0 0 0 5px rgba(66,133,244,.2)}50%{box-shadow:0 0 0 12px rgba(66,133,244,.0)}}
+    .sbox-row {
+      display: flex;
+      align-items: center;
+      padding: .45rem .75rem .45rem .9rem;
+      gap: .55rem;
+    }
+    .sbox-row:first-child { border-bottom: 1px solid #f0f0f0; }
 
-    #map-wrap.fullscreen{position:fixed;inset:0;height:100vh;z-index:2000}
-    #map-wrap.fullscreen~#bottom-panel{display:none}
+    .sbox-row input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-family: inherit;
+      font-size: 16px; /* evita zoom iOS */
+      color: var(--text);
+      background: transparent;
+    }
+    .sbox-row input::placeholder { color: #9aa0a6; }
+
+    .orig-dot { width: 10px; height: 10px; background: #34a853; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 0 2px #34a853; flex-shrink: 0; }
+    .dest-dot { width: 10px; height: 10px; background: var(--red); border-radius: 50%; flex-shrink: 0; }
+
+    .sbox-btn {
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 30px; height: 30px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: .85rem;
+    }
+    .sbox-btn:hover { background: #1557b0; }
+
+    .sbox-clear { background: none; border: none; cursor: pointer; color: var(--muted); font-size: .9rem; padding: 2px 4px; line-height: 1; }
+
+    #ac-list {
+      background: white;
+      border-radius: 14px;
+      margin-top: 6px;
+      box-shadow: var(--sh2);
+      overflow: hidden;
+      display: none;
+      position: absolute;
+      width: 100%;
+      z-index: 10;
+    }
+
+    .ac-item {
+      padding: .6rem 1rem;
+      font-size: .84rem;
+      color: var(--text);
+      cursor: pointer;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      align-items: flex-start;
+      gap: .6rem;
+    }
+    .ac-item:last-child { border-bottom: none; }
+    .ac-item:hover, .ac-item:active { background: #f8f9fa; }
+    .ac-ic { color: var(--muted); font-size: .85rem; padding-top: 1px; flex-shrink: 0; }
+    .ac-name { font-weight: 500; line-height: 1.3; }
+    .ac-sub { font-size: .73rem; color: var(--muted); }
+
+    .map-fab {
+      position: absolute;
+      right: 10px;
+      z-index: 500;
+      background: white;
+      border: none;
+      border-radius: 50%;
+      width: 38px; height: 38px;
+      cursor: pointer;
+      box-shadow: var(--sh);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      transition: box-shadow .15s;
+    }
+    .map-fab:hover { box-shadow: var(--sh2); }
+    #btn-center { bottom: 56px; }
+    #btn-expand { bottom: 10px; }
+
+    #btn-logout {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 500;
+      background: rgba(255,255,255,.9);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: .3rem .75rem;
+      font-family: inherit;
+      font-size: .74rem;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    #btn-logout:hover { color: var(--red); border-color: var(--red); }
+
+    .my-dot {
+      width: 16px; height: 16px;
+      background: var(--blue2);
+      border: 2.5px solid white;
+      border-radius: 50%;
+      box-shadow: 0 0 0 5px rgba(66,133,244,.2);
+      animation: glow 2s ease-in-out infinite;
+    }
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 0 5px rgba(66,133,244,.2); }
+      50% { box-shadow: 0 0 0 12px rgba(66,133,244,.0); }
+    }
+
+    #map-wrap.fullscreen {
+      position: fixed;
+      inset: 0;
+      height: 100vh;
+      z-index: 2000;
+      padding-top: 0;
+    }
+    #map-wrap.fullscreen ~ #bottom-panel { display: none; }
 
     /* ═══ PANEL INFERIOR ═══ */
-    #bottom-panel{flex:1;overflow-y:auto;background:white;position:relative}
-    .handle-row{display:flex;justify-content:center;padding:8px 0 4px}
-    .handle{width:36px;height:4px;background:#dadce0;border-radius:2px}
-    #gps-row{display:flex;align-items:center;gap:.5rem;padding:.4rem 1rem .6rem;font-size:.78rem;color:var(--muted)}
-    .sdot{width:8px;height:8px;border-radius:50%;background:#dadce0;flex-shrink:0}
-    .sdot.on{background:var(--green);animation:blink 1.5s ease-in-out infinite}
-    @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
-    #coords-mini{padding:.3rem 1rem;font-size:.71rem;color:var(--muted);font-family:'Courier New',monospace;background:#fafafa;border-bottom:1px solid #f0f0f0;display:none}
-    .section{padding:.75rem 1rem;border-bottom:1px solid #f0f0f0}
-    .section-title{font-size:.69rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.6rem}
-    #no-dest{text-align:center;padding:1.75rem 1rem 1.5rem;color:var(--muted);font-size:.85rem}
-    #no-dest .nd-icon{font-size:2.2rem;margin-bottom:.5rem}
-    #route-card{display:none}
-    .route-row{background:#f8f9fa;border-radius:12px;padding:.75rem 1rem;display:flex;align-items:center;gap:.75rem}
-    .route-icon{font-size:1.6rem;flex-shrink:0}
-    .route-info{flex:1}
-    .route-km{font-size:1.05rem;font-weight:700;color:var(--text)}
-    .route-sub{font-size:.75rem;color:var(--muted);margin-top:2px}
-    .route-time{font-size:.82rem;font-weight:600;color:var(--blue);background:rgba(26,115,232,.08);border-radius:8px;padding:.25rem .6rem;flex-shrink:0}
+    #bottom-panel {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      background: white;
+      position: relative;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      /* Padding inferior para home indicator de iPhone */
+      padding-bottom: var(--sab);
+    }
+
+    .handle-row { display: flex; justify-content: center; padding: 8px 0 4px; }
+    .handle { width: 36px; height: 4px; background: #dadce0; border-radius: 2px; }
+
+    #gps-row {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .4rem 1rem .6rem;
+      font-size: .78rem;
+      color: var(--muted);
+    }
+
+    .sdot { width: 8px; height: 8px; border-radius: 50%; background: #dadce0; flex-shrink: 0; }
+    .sdot.on { background: var(--green); animation: blink 1.5s ease-in-out infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+    #coords-mini {
+      padding: .3rem 1rem;
+      font-size: .71rem;
+      color: var(--muted);
+      font-family: 'Courier New', monospace;
+      background: #fafafa;
+      border-bottom: 1px solid #f0f0f0;
+      display: none;
+    }
+
+    .section { padding: .75rem 1rem; border-bottom: 1px solid #f0f0f0; }
+    .section-title { font-size: .69rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .6rem; }
+
+    #no-dest { text-align: center; padding: 1.75rem 1rem 1.5rem; color: var(--muted); font-size: .85rem; }
+    #no-dest .nd-icon { font-size: 2.2rem; margin-bottom: .5rem; }
+
+    #route-card { display: none; }
+
+    .route-row { background: #f8f9fa; border-radius: 12px; padding: .75rem 1rem; display: flex; align-items: center; gap: .75rem; }
+    .route-icon { font-size: 1.6rem; flex-shrink: 0; }
+    .route-info { flex: 1; }
+    .route-km { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+    .route-sub { font-size: .75rem; color: var(--muted); margin-top: 2px; }
+    .route-time { font-size: .82rem; font-weight: 600; color: var(--blue); background: rgba(26,115,232,.08); border-radius: 8px; padding: .25rem .6rem; flex-shrink: 0; }
 
     /* Selector tarifa */
-    #tarifa-section{display:none}
-    .chips{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.75rem}
-    .chip{padding:.32rem .75rem;border-radius:20px;font-size:.76rem;font-weight:500;border:1.5px solid var(--border);color:var(--muted);cursor:pointer;background:white;transition:all .15s;white-space:nowrap}
-    .chip:hover{border-color:var(--blue);color:var(--blue)}
-    .chip.active{background:var(--blue);border-color:var(--blue);color:white}
-    .chip.hidden{display:none}
+    #tarifa-section { display: none; }
+
+    .chips { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .75rem; }
+    .chip {
+      padding: .32rem .75rem;
+      border-radius: 20px;
+      font-size: .76rem;
+      font-weight: 500;
+      border: 1.5px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      background: white;
+      transition: all .15s;
+      white-space: nowrap;
+      -webkit-appearance: none;
+    }
+    .chip:hover { border-color: var(--blue); color: var(--blue); }
+    .chip.active { background: var(--blue); border-color: var(--blue); color: white; }
+    .chip.hidden { display: none; }
 
     /* Precio */
-    #price-card{display:none;margin-top:.6rem}
+    #price-card { display: none; margin-top: .6rem; }
 
-    .price-fixed{background:linear-gradient(135deg,#34a853 0%,#1e7e34 100%);border-radius:14px;padding:1rem 1.25rem;color:white;margin-bottom:.65rem}
-    .pf-label{font-size:.74rem;opacity:.85;margin-bottom:.2rem}
-    .pf-main{font-size:2.2rem;font-weight:700;letter-spacing:-.02em;line-height:1}
-    .pf-desc{font-size:.75rem;opacity:.85;margin-top:.3rem;line-height:1.4}
-    .pf-badge{display:inline-block;background:rgba(255,255,255,.2);border-radius:6px;padding:.15rem .5rem;font-size:.7rem;font-weight:600;margin-top:.4rem}
+    .price-fixed {
+      background: linear-gradient(135deg, #34a853 0%, #1e7e34 100%);
+      border-radius: 14px;
+      padding: 1rem 1.25rem;
+      color: white;
+      margin-bottom: .65rem;
+    }
+    .pf-label { font-size: .74rem; opacity: .85; margin-bottom: .2rem; }
+    .pf-main { font-size: 2.2rem; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+    .pf-desc { font-size: .75rem; opacity: .85; margin-top: .3rem; line-height: 1.4; }
+    .pf-badge { display: inline-block; background: rgba(255,255,255,.2); border-radius: 6px; padding: .15rem .5rem; font-size: .7rem; font-weight: 600; margin-top: .4rem; }
 
-    .price-meter{background:linear-gradient(135deg,#1a73e8 0%,#4285f4 100%);border-radius:14px;padding:1rem 1.25rem;color:white;display:flex;align-items:center;justify-content:space-between;margin-bottom:.65rem}
-    .pm-left .pm-label{font-size:.74rem;opacity:.85;margin-bottom:.15rem}
-    .pm-left .pm-main{font-size:2.1rem;font-weight:700;letter-spacing:-.02em;line-height:1}
-    .pm-right{text-align:center;background:rgba(255,255,255,.18);border-radius:10px;padding:.4rem .7rem;min-width:72px}
-    .pm-right .pm-tag{font-size:.71rem;font-weight:600}
-    .pm-right .pm-range{font-size:.67rem;opacity:.8;margin-top:.1rem}
+    .price-meter {
+      background: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%);
+      border-radius: 14px;
+      padding: 1rem 1.25rem;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: .65rem;
+    }
+    .pm-left .pm-label { font-size: .74rem; opacity: .85; margin-bottom: .15rem; }
+    .pm-left .pm-main { font-size: 2.1rem; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+    .pm-right { text-align: center; background: rgba(255,255,255,.18); border-radius: 10px; padding: .4rem .7rem; min-width: 72px; }
+    .pm-right .pm-tag { font-size: .71rem; font-weight: 600; }
+    .pm-right .pm-range { font-size: .67rem; opacity: .8; margin-top: .1rem; }
 
-    .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.6rem}
-    .pg-item{background:#f8f9fa;border-radius:10px;padding:.6rem .5rem;text-align:center}
-    .pg-val{font-size:.92rem;font-weight:700;color:var(--text)}
-    .pg-key{font-size:.64rem;color:var(--muted);margin-top:2px;line-height:1.3}
+    .price-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: .5rem; margin-bottom: .6rem; }
+    .pg-item { background: #f8f9fa; border-radius: 10px; padding: .6rem .5rem; text-align: center; }
+    .pg-val { font-size: .92rem; font-weight: 700; color: var(--text); }
+    .pg-key { font-size: .64rem; color: var(--muted); margin-top: 2px; line-height: 1.3; }
 
-    .tarifa-explain{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:.7rem .9rem;margin-bottom:.6rem}
-    .te-title{font-size:.72rem;font-weight:700;color:#92400e;margin-bottom:.4rem;display:flex;align-items:center;gap:.3rem}
-    .te-row{display:flex;justify-content:space-between;align-items:flex-start;font-size:.75rem;color:#78350f;padding:.2rem 0;border-bottom:1px solid #fde68a}
-    .te-row:last-child{border-bottom:none;padding-bottom:0}
-    .te-val{font-weight:600;white-space:nowrap;margin-left:.5rem}
+    .tarifa-explain { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: .7rem .9rem; margin-bottom: .6rem; }
+    .te-title { font-size: .72rem; font-weight: 700; color: #92400e; margin-bottom: .4rem; display: flex; align-items: center; gap: .3rem; }
+    .te-row { display: flex; justify-content: space-between; align-items: flex-start; font-size: .75rem; color: #78350f; padding: .2rem 0; border-bottom: 1px solid #fde68a; }
+    .te-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .te-val { font-weight: 600; white-space: nowrap; margin-left: .5rem; }
 
-    .info-note{font-size:.7rem;color:var(--muted);text-align:center;margin-top:.5rem;line-height:1.55;padding:0 .25rem}
+    .info-note { font-size: .7rem; color: var(--muted); text-align: center; margin-top: .5rem; line-height: 1.55; padding: 0 .25rem; }
 
-    #route-loading{display:none;text-align:center;padding:.75rem 1rem;font-size:.82rem;color:var(--muted)}
+    #route-loading { display: none; text-align: center; padding: .75rem 1rem; font-size: .82rem; color: var(--muted); }
 
-    .leaflet-control-zoom{border-radius:8px!important;overflow:hidden;box-shadow:var(--sh)!important;border:none!important}
-    .leaflet-control-zoom a{color:var(--muted)!important;font-weight:600!important}
-    .leaflet-popup-content-wrapper{border-radius:12px!important;box-shadow:var(--sh2)!important;font-family:'Inter',sans-serif!important}
-    .leaflet-popup-tip{display:none}
-    .leaflet-popup-content{margin:.65rem .9rem!important;font-size:.85rem!important}
+    /* Leaflet */
+    .leaflet-control-zoom { border-radius: 8px !important; overflow: hidden; box-shadow: var(--sh) !important; border: none !important; }
+    .leaflet-control-zoom a { color: var(--muted) !important; font-weight: 600 !important; }
+    .leaflet-popup-content-wrapper { border-radius: 12px !important; box-shadow: var(--sh2) !important; font-family: 'Inter', sans-serif !important; }
+    .leaflet-popup-tip { display: none; }
+    .leaflet-popup-content { margin: .65rem .9rem !important; font-size: .85rem !important; }
 
-    /* BANNER DE INSTALACIÓN PWA (estilo Taxi OCR) */
+    /* ═══ BANNER INSTALACIÓN PWA ═══ */
     #install-banner {
       display: none;
       position: fixed;
-      bottom: 20px;
+      bottom: calc(20px + var(--sab));
       left: 16px;
       right: 16px;
       background: linear-gradient(135deg, #0c0e12 0%, #12151b 100%);
-      border: 1px solid rgba(62, 207, 142, 0.4);
+      border: 1px solid rgba(62,207,142,.4);
       border-radius: 16px;
       padding: 14px 16px;
       z-index: 999;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(62, 207, 142, 0.1);
-      animation: slideUpBanner 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 8px 32px rgba(0,0,0,.6), 0 0 0 1px rgba(62,207,142,.1);
+      animation: slideUpBanner .4s cubic-bezier(.16,1,.3,1);
       backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
     }
-    @media(min-width: 821px){
+
+    @media (min-width: 821px) {
       #install-banner {
         bottom: 24px;
         left: 50%;
@@ -200,47 +569,26 @@
         width: 380px;
       }
     }
+
     @keyframes slideUpBanner {
       from { opacity: 0; transform: translateY(20px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    .install-banner-inner {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+
+    .install-banner-inner { display: flex; align-items: center; gap: 12px; }
     .install-icon {
-      width: 48px;
-      height: 48px;
-      min-width: 48px;
-      background: #000;
-      border-radius: 12px;
-      border: 1px solid rgba(62, 207, 142, 0.2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 26px;
+      width: 48px; height: 48px; min-width: 48px;
       background: var(--auth-s);
+      border-radius: 12px;
+      border: 1px solid rgba(62,207,142,.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px;
     }
-    .install-text {
-      flex: 1;
-    }
-    .install-text strong {
-      display: block;
-      font-size: 14px;
-      color: var(--text);
-      font-weight: 700;
-      margin-bottom: 2px;
-    }
-    .install-text span {
-      font-size: 11px;
-      color: var(--muted2);
-    }
-    .install-actions {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
+    .install-text { flex: 1; }
+    .install-text strong { display: block; font-size: 14px; color: #e8e8f0; font-weight: 700; margin-bottom: 2px; }
+    .install-text span { font-size: 11px; color: var(--muted2); }
+    .install-actions { display: flex; gap: 8px; align-items: center; }
+
     .btn-install-banner {
       background: var(--teal);
       color: #000;
@@ -252,11 +600,13 @@
       cursor: pointer;
       font-family: 'Inter', sans-serif;
       white-space: nowrap;
-      box-shadow: 0 4px 12px rgba(62, 207, 142, 0.3);
-      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(62,207,142,.3);
+      transition: all .2s;
+      -webkit-appearance: none;
     }
     .btn-install-banner:hover { filter: brightness(1.08); }
-    .btn-install-banner:active { transform: scale(0.96); }
+    .btn-install-banner:active { transform: scale(.96); }
+
     .btn-dismiss {
       background: transparent;
       color: var(--muted2);
@@ -267,65 +617,102 @@
       line-height: 1;
     }
 
-    /* Modal de instrucciones para iOS */
-    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:9999;display:none;align-items:center;justify-content:center;padding:1.5rem}
-    .modal-overlay.show{display:flex}
-    .modal-box{background:var(--auth-s);border-radius:20px;padding:2rem;max-width:380px;width:100%;border:1px solid var(--auth-b);color:#e8e8f0}
-    .modal-box h2{font-size:1.2rem;margin-bottom:.5rem}
-    .modal-box p{font-size:.85rem;color:var(--muted2);margin-bottom:1rem}
-    .modal-box ol{padding-left:1.2rem;font-size:.82rem;color:#ccc;margin-bottom:1.5rem}
-    .modal-box ol li{margin-bottom:.5rem}
-    .modal-box .btn{background:var(--teal);color:#0f1117;border:none;padding:.7rem;border-radius:9px;font-weight:600;cursor:pointer;width:100%}
-
-    /* Ajuste para que el banner no tape el botón de login en móvil */
-    @media(max-width: 600px){
-      #install-banner { bottom: 80px; }
+    /* ═══ MODAL iOS ═══ */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.7);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
     }
+    .modal-overlay.show { display: flex; }
+    .modal-box {
+      background: var(--auth-s);
+      border-radius: 20px;
+      padding: 2rem;
+      max-width: 380px;
+      width: 100%;
+      border: 1px solid var(--auth-b);
+      color: #e8e8f0;
+    }
+    .modal-box h2 { font-size: 1.2rem; margin-bottom: .5rem; }
+    .modal-box p { font-size: .85rem; color: var(--muted2); margin-bottom: 1rem; }
+    .modal-box ol { padding-left: 1.2rem; font-size: .82rem; color: #ccc; margin-bottom: 1.5rem; }
+    .modal-box ol li { margin-bottom: .5rem; }
+    .modal-box .btn { background: var(--teal); color: #0f1117; border: none; padding: .7rem; border-radius: 9px; font-weight: 600; cursor: pointer; width: 100%; }
+
+    /* ═══ AJUSTES MÓVIL ═══ */
+    @media (max-width: 600px) {
+      #install-banner { bottom: calc(80px + var(--sab)); }
+    }
+
+    /* Evita el scroll rebote en iOS cuando el panel está al final */
+    #bottom-panel::-webkit-scrollbar { display: none; }
   </style>
 </head>
 <body>
 
 <!-- ════ AUTH ════ -->
 <div id="screen-auth">
-<div class="card">
-  <div class="brand">
-    <div class="brand-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M13.5 3L4.5 14h8.25L10.5 21l9-11h-8.25L13.5 3Z" fill="#3ecf8e"/></svg></div>
-    <span class="brand-name">Tazi</span>
+  <div class="card">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M13.5 3L4.5 14h8.25L10.5 21l9-11h-8.25L13.5 3Z" fill="#3ecf8e"/>
+        </svg>
+      </div>
+      <span class="brand-name">Tazi</span>
+    </div>
+    <div id="amsg" class="amsg"></div>
+    <div id="view-login" class="view active">
+      <h1>Bienvenido</h1>
+      <p class="subtitle">Tu taxi en Madrid</p>
+      <div class="field">
+        <label for="le">Correo</label>
+        <input id="le" type="email" placeholder="tu@correo.com" autocomplete="email"/>
+      </div>
+      <div class="field">
+        <label for="lp">Contraseña</label>
+        <input id="lp" type="password" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+      <button id="btn-login" class="btn" onclick="doLogin()">Iniciar sesión</button>
+      <div class="divider">o</div>
+      <button class="btn btn-ghost" onclick="doMagic()">Enviar enlace mágico</button>
+      <button class="btn btn-demo" onclick="entrarDemo()">🚕 Entrar sin cuenta (demo)</button>
+      <button class="btn btn-install" id="btn-install" onclick="instalarApp()">📲 Instalar Tazi</button>
+      <p class="footer-link">¿Sin cuenta? <a href="#" onclick="sw('register')">Regístrate</a></p>
+    </div>
+    <div id="view-register" class="view">
+      <h1>Crear cuenta</h1>
+      <p class="subtitle">Empieza a usar Tazi gratis</p>
+      <div class="field">
+        <label for="re">Correo</label>
+        <input id="re" type="email" placeholder="tu@correo.com" autocomplete="email"/>
+      </div>
+      <div class="field">
+        <label for="rp">Contraseña</label>
+        <input id="rp" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"/>
+      </div>
+      <button id="btn-reg" class="btn" onclick="doRegister()">Crear cuenta</button>
+      <p class="footer-link">¿Ya tienes cuenta? <a href="#" onclick="sw('login')">Inicia sesión</a></p>
+    </div>
   </div>
-  <div id="amsg" class="amsg"></div>
-  <div id="view-login" class="view active">
-    <h1>Bienvenido</h1>
-    <p class="subtitle">Tu taxi en Madrid</p>
-    <div class="field"><label for="le">Correo</label><input id="le" type="email" placeholder="tu@correo.com" autocomplete="email"/></div>
-    <div class="field"><label for="lp">Contraseña</label><input id="lp" type="password" placeholder="••••••••" autocomplete="current-password"/></div>
-    <button id="btn-login" class="btn" onclick="doLogin()">Iniciar sesión</button>
-    <div class="divider">o</div>
-    <button class="btn btn-ghost" onclick="doMagic()">Enviar enlace mágico</button>
-    <button class="btn btn-demo" onclick="entrarDemo()">🚕 Entrar sin cuenta (demo)</button>
-    <!-- Botón de instalación siempre visible (excepto si ya está instalado) -->
-    <button class="btn btn-install" id="btn-install" onclick="instalarApp()">📲 Instalar Tazi</button>
-    <p class="footer-link">¿Sin cuenta? <a href="#" onclick="sw('register')">Regístrate</a></p>
-  </div>
-  <div id="view-register" class="view">
-    <h1>Crear cuenta</h1>
-    <p class="subtitle">Empieza a usar Tazi gratis</p>
-    <div class="field"><label for="re">Correo</label><input id="re" type="email" placeholder="tu@correo.com" autocomplete="email"/></div>
-    <div class="field"><label for="rp">Contraseña</label><input id="rp" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"/></div>
-    <button id="btn-reg" class="btn" onclick="doRegister()">Crear cuenta</button>
-    <p class="footer-link">¿Ya tienes cuenta? <a href="#" onclick="sw('login')">Inicia sesión</a></p>
-  </div>
-</div>
 </div>
 
-<!-- Modal de instrucciones para instalación manual -->
+<!-- Modal instrucciones instalación manual -->
 <div class="modal-overlay" id="install-modal">
   <div class="modal-box">
     <h2>📲 Instalar Tazi</h2>
     <p>Tu navegador no permite instalación automática, pero puedes añadir Tazi a tu pantalla de inicio:</p>
     <ol>
-      <li><strong>En Android (Chrome):</strong> toca el menú (⋮) y selecciona <em>Instalar aplicación</em>.</li>
-      <li><strong>En iPhone (Safari):</strong> toca el icono de compartir y elige <em>Añadir a pantalla de inicio</em>.</li>
-      <li><strong>En otros navegadores:</strong> busca la opción <em>Añadir a pantalla de inicio</em> en el menú.</li>
+      <li><strong>Android (Chrome):</strong> toca el menú (⋮) y selecciona <em>Instalar aplicación</em>.</li>
+      <li><strong>iPhone (Safari):</strong> toca el icono de compartir y elige <em>Añadir a pantalla de inicio</em>.</li>
+      <li><strong>Otros navegadores:</strong> busca <em>Añadir a pantalla de inicio</em> en el menú.</li>
     </ol>
     <button class="btn" onclick="cerrarModal()">Entendido</button>
   </div>
@@ -337,16 +724,20 @@
     <div id="map"></div>
     <div id="search-bar">
       <div class="sbox-wrap">
-        <!-- Origen -->
         <div class="sbox-row">
           <div class="orig-dot"></div>
-          <input id="orig-input" type="text" placeholder="Mi ubicación (GPS)" oninput="onOrigSI()" onkeydown="if(event.key==='Enter')doOrigSearch()" onfocus="focusOrig()"/>
+          <input id="orig-input" type="text" placeholder="Mi ubicación (GPS)"
+            oninput="onOrigSI()"
+            onkeydown="if(event.key==='Enter')doOrigSearch()"
+            onfocus="focusOrig()"/>
           <button class="sbox-clear" id="btn-clear-orig" onclick="clearOrig()" style="display:none">✕</button>
         </div>
-        <!-- Destino -->
         <div class="sbox-row">
           <div class="dest-dot"></div>
-          <input id="dest-input" type="text" placeholder="¿A dónde vas?" oninput="onSI()" onkeydown="if(event.key==='Enter')doSearch()" onfocus="focusDest()"/>
+          <input id="dest-input" type="text" placeholder="¿A dónde vas?"
+            oninput="onSI()"
+            onkeydown="if(event.key==='Enter')doSearch()"
+            onfocus="focusDest()"/>
           <button class="sbox-clear" id="btn-clear" onclick="clearDest()" style="display:none">✕</button>
           <button class="sbox-btn" onclick="doSearch()">→</button>
         </div>
@@ -360,7 +751,10 @@
 
   <div id="bottom-panel">
     <div class="handle-row"><div class="handle"></div></div>
-    <div id="gps-row"><div class="sdot" id="sdot"></div><span id="stext">Conectando GPS…</span></div>
+    <div id="gps-row">
+      <div class="sdot" id="sdot"></div>
+      <span id="stext">Conectando GPS…</span>
+    </div>
     <div id="coords-mini"></div>
 
     <div id="no-dest" class="section">
@@ -398,7 +792,7 @@
   </div>
 </div>
 
-<!-- BANNER DE INSTALACIÓN PWA (estilo Taxi OCR) -->
+<!-- BANNER INSTALACIÓN PWA -->
 <div id="install-banner">
   <div class="install-banner-inner">
     <div class="install-icon">🚕</div>
@@ -417,7 +811,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // ═══════════════════════════════════════════
-// CONFIGURACIÓN SUPABASE (opcional)
+// CONFIGURACIÓN SUPABASE
 // ═══════════════════════════════════════════
 const SB_URL = 'https://ejbvfirfodfktekgpwkm.supabase.co';
 const SB_KEY = 'sb_publishable_ZNwpPu1uqxZfKWOU6FDgbQ_0sLhGrXt';
@@ -432,7 +826,7 @@ try {
 } catch(e) { console.warn('Supabase no disponible, modo demo'); }
 
 // ═══════════════════════════════════════════
-// TARIFAS TAXI MADRID 2026 (OFICIAL)
+// TARIFAS TAXI MADRID 2026
 // ═══════════════════════════════════════════
 const TARIFAS = {
   t1: { id:'T1', nombre:'Laborable diurno', horario:'Lun–Vie 7:00–21:00 h', tipo:'metro', bandera:2.55, km:1.40, min:4.50 },
@@ -443,7 +837,7 @@ const TARIFAS = {
 };
 
 // ═══════════════════════════════════════════
-// DETECCIÓN DE ORIGEN (AEROPUERTO / ESTACIONES)
+// DETECCIÓN DE ORIGEN
 // ═══════════════════════════════════════════
 const AIRPORT_COORDS = { lat: 40.4722, lng: -3.5604 };
 const AIRPORT_RADIUS_KM = 4.0;
@@ -492,36 +886,31 @@ const GPS_THRESHOLD_M = 15;
 const SAVE_MS = 10000;
 
 // ═══════════════════════════════════════════
-// INSTALACIÓN PWA (MEJORADA)
+// PWA INSTALACIÓN
 // ═══════════════════════════════════════════
 let deferredPrompt = null;
 const btnInstall = document.getElementById('btn-install');
 const banner = document.getElementById('install-banner');
 const modal = document.getElementById('install-modal');
 
-// Si ya está instalada (modo standalone), ocultamos todo
-if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+if (isStandalone) {
   btnInstall.style.display = 'none';
   banner.style.display = 'none';
 } else {
-  // Mostrar botón en login
   btnInstall.style.display = 'flex';
-  // El banner se mostrará al dispararse beforeinstallprompt o tras un tiempo
 }
 
-// Escuchar evento de instalación (Chrome, Edge, etc.)
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  // Mostrar banner (si no fue descartado)
-  const dismissed = sessionStorage.getItem('install_dismissed');
-  if (!dismissed) {
+  if (!sessionStorage.getItem('install_dismissed')) {
     banner.style.display = 'block';
   }
   btnInstall.style.display = 'flex';
 });
 
-// Si la app se instala
 window.addEventListener('appinstalled', () => {
   deferredPrompt = null;
   btnInstall.style.display = 'none';
@@ -529,55 +918,38 @@ window.addEventListener('appinstalled', () => {
   toast('¡Tazi instalada correctamente! 🎉', 'success');
 });
 
-// Si tras 3s no hay evento beforeinstallprompt, mostrar mensaje de ayuda en el botón (ya visible)
-setTimeout(() => {
-  if (!deferredPrompt && !window.matchMedia('(display-mode: standalone)').matches) {
-    // El botón ya está visible, pero podemos añadir un tooltip o cambiar el texto
-    // No hacemos nada, el botón ya tiene el comportamiento de abrir modal.
-  }
-}, 3000);
-
 function instalarApp() {
   if (deferredPrompt) {
-    // Navegador compatible: muestra el diálogo nativo
     deferredPrompt.prompt();
     deferredPrompt.userChoice.then((choice) => {
       if (choice.outcome === 'accepted') {
-        console.log('Usuario aceptó la instalación');
         btnInstall.style.display = 'none';
         banner.style.display = 'none';
-      } else {
-        console.log('Usuario rechazó la instalación');
       }
       deferredPrompt = null;
     });
   } else {
-    // Navegador no compatible: mostramos el modal con instrucciones
     modal.classList.add('show');
   }
 }
 
-function cerrarModal() {
-  modal.classList.remove('show');
-}
-
+function cerrarModal() { modal.classList.remove('show'); }
 function dismissInstall() {
   banner.style.display = 'none';
   sessionStorage.setItem('install_dismissed', '1');
 }
 
-// Toast simple
-function toast(msg, type='success') {
+function toast(msg, type = 'success') {
   const t = document.createElement('div');
   t.style.cssText = `
-    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
-    background: var(--card); border: 1px solid var(--border);
+    position: fixed; bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    left: 50%; transform: translateX(-50%);
+    background: #1a1a2e; border: 1px solid #2a2a45;
     border-radius: 40px; padding: 12px 28px;
     font-size: 13px; font-family: 'Inter', sans-serif; font-weight: 500;
     z-index: 2100; color: ${type === 'success' ? '#34d399' : '#fb7185'};
-    box-shadow: 0 12px 36px rgba(0,0,0,0.6);
-    transition: all 0.3s; opacity: 0; pointer-events: none;
-    background: var(--auth-s);
+    box-shadow: 0 12px 36px rgba(0,0,0,.6);
+    transition: all 0.3s; opacity: 0; pointer-events: none; white-space: nowrap;
   `;
   t.textContent = msg;
   document.body.appendChild(t);
@@ -588,13 +960,13 @@ function toast(msg, type='success') {
 // ═══════════════════════════════════════════
 // AUTH UI
 // ═══════════════════════════════════════════
-function showMsg(t, tp='error'){ const e=document.getElementById('amsg'); e.textContent=t; e.className='amsg '+tp+' show'; }
-function clearMsg(){ const e=document.getElementById('amsg'); e.className='amsg'; e.textContent=''; }
-function sw(n){ clearMsg(); document.querySelectorAll('.view').forEach(v=>v.classList.remove('active')); document.getElementById('view-'+n).classList.add('active'); }
-function ld(id, on, lbl){ const b=document.getElementById(id); if(!b)return; b.disabled=on; b.innerHTML=on?'<span class="sp"></span>Cargando…':lbl; }
+function showMsg(t, tp='error') { const e=document.getElementById('amsg'); e.textContent=t; e.className='amsg '+tp+' show'; }
+function clearMsg() { const e=document.getElementById('amsg'); e.className='amsg'; e.textContent=''; }
+function sw(n) { clearMsg(); document.querySelectorAll('.view').forEach(v=>v.classList.remove('active')); document.getElementById('view-'+n).classList.add('active'); }
+function ld(id, on, lbl) { const b=document.getElementById(id); if(!b)return; b.disabled=on; b.innerHTML=on?'<span class="sp"></span>Cargando…':lbl; }
 
-async function doLogin(){
-  if(!supabaseReady){ showMsg('Supabase no disponible, usa el modo demo.', 'error'); return; }
+async function doLogin() {
+  if(!supabaseReady){ showMsg('Supabase no disponible, usa el modo demo.'); return; }
   clearMsg();
   const e=document.getElementById('le').value.trim(), p=document.getElementById('lp').value;
   if(!e||!p){ showMsg('Completa todos los campos.'); return; }
@@ -604,8 +976,8 @@ async function doLogin(){
   if(error) showMsg(error.message);
 }
 
-async function doRegister(){
-  if(!supabaseReady){ showMsg('Supabase no disponible, usa el modo demo.', 'error'); return; }
+async function doRegister() {
+  if(!supabaseReady){ showMsg('Supabase no disponible, usa el modo demo.'); return; }
   clearMsg();
   const e=document.getElementById('re').value.trim(), p=document.getElementById('rp').value;
   if(!e||!p){ showMsg('Completa todos los campos.'); return; }
@@ -616,8 +988,8 @@ async function doRegister(){
   if(error) showMsg(error.message); else showMsg('¡Cuenta creada! Revisa tu correo.', 'success');
 }
 
-async function doMagic(){
-  if(!supabaseReady){ showMsg('Supabase no disponible, usa el modo demo.', 'error'); return; }
+async function doMagic() {
+  if(!supabaseReady){ showMsg('Supabase no disponible, usa el modo demo.'); return; }
   clearMsg();
   const e=document.getElementById('le').value.trim();
   if(!e){ showMsg('Escribe tu correo primero.'); return; }
@@ -625,7 +997,7 @@ async function doMagic(){
   if(error) showMsg(error.message); else showMsg('Enlace enviado — revisa tu bandeja.', 'success');
 }
 
-function entrarDemo(){
+function entrarDemo() {
   currentUser = { id: 'demo-user', email: 'demo@tazi.es' };
   document.getElementById('screen-auth').style.display = 'none';
   document.getElementById('screen-map').classList.add('active');
@@ -633,7 +1005,7 @@ function entrarDemo(){
   startGPS();
 }
 
-async function doLogout(){
+async function doLogout() {
   stopGPS();
   if(supabaseReady && currentUser && currentUser.id !== 'demo-user') {
     await sb.auth.signOut();
@@ -648,7 +1020,7 @@ async function doLogout(){
 // ═══════════════════════════════════════════
 // SESIÓN
 // ═══════════════════════════════════════════
-if(supabaseReady){
+if(supabaseReady) {
   (async()=>{
     const { data: { session } } = await sb.auth.getSession();
     if(session?.user) onLogin(session.user);
@@ -659,7 +1031,7 @@ if(supabaseReady){
   });
 }
 
-function onLogin(u){
+function onLogin(u) {
   currentUser = u;
   document.getElementById('screen-auth').style.display = 'none';
   document.getElementById('screen-map').classList.add('active');
@@ -667,7 +1039,7 @@ function onLogin(u){
   startGPS();
 }
 
-function onLogout(){
+function onLogout() {
   currentUser = null;
   document.getElementById('screen-map').classList.remove('active');
   document.getElementById('screen-auth').style.display = '';
@@ -677,7 +1049,7 @@ function onLogout(){
 // ═══════════════════════════════════════════
 // MAPA
 // ═══════════════════════════════════════════
-function initMap(){
+function initMap() {
   if(map) return;
   map = L.map('map', { center:[40.4168,-3.7038], zoom:13, zoomControl:true });
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -687,9 +1059,9 @@ function initMap(){
   map.on('click', ()=>document.getElementById('ac-list').style.display='none');
 }
 
-function centerMap(){ if(map && myPos) map.setView([myPos.lat, myPos.lng], 16, { animate:true }); }
+function centerMap() { if(map && myPos) map.setView([myPos.lat, myPos.lng], 16, { animate:true }); }
 
-function toggleFull(){
+function toggleFull() {
   fullscreen = !fullscreen;
   document.getElementById('map-wrap').classList.toggle('fullscreen', fullscreen);
   document.getElementById('btn-expand').textContent = fullscreen ? '✕' : '⛶';
@@ -699,8 +1071,7 @@ function toggleFull(){
 // ═══════════════════════════════════════════
 // GPS
 // ═══════════════════════════════════════════
-
-function distMetros(a, b){
+function distMetros(a, b) {
   const R = 6371000;
   const dLat = (b.lat - a.lat) * Math.PI / 180;
   const dLng = (b.lng - a.lng) * Math.PI / 180;
@@ -708,21 +1079,20 @@ function distMetros(a, b){
   return R * 2 * Math.asin(Math.sqrt(sin2));
 }
 
-function startGPS(){
+function startGPS() {
   if(!navigator.geolocation){ setSt('GPS no disponible', false); return; }
   setSt('Conectando GPS…', false);
   watchId = navigator.geolocation.watchPosition(onPos, onGPSErr, { enableHighAccuracy:true, maximumAge:5000, timeout:15000 });
 }
-function stopGPS(){ if(watchId!=null){ navigator.geolocation.clearWatch(watchId); watchId=null; } }
 
-function onPos(pos){
+function stopGPS() { if(watchId!=null){ navigator.geolocation.clearWatch(watchId); watchId=null; } }
+
+function onPos(pos) {
   const { latitude:lat, longitude:lng, accuracy:acc } = pos.coords;
   const newPos = { lat, lng };
-
   setSt('GPS activo · ±'+Math.round(acc)+' m', true);
   const cm=document.getElementById('coords-mini');
   cm.style.display='block'; cm.textContent='📍 '+lat.toFixed(6)+', '+lng.toFixed(6);
-
   const ll=[lat,lng];
   const icon = L.divIcon({ className:'', html:'<div class="my-dot"></div>', iconSize:[16,16], iconAnchor:[8,8] });
   if(!myMarker){
@@ -741,7 +1111,6 @@ function onPos(pos){
     accCircle.setLatLng(ll);
     accCircle.setRadius(acc);
   }
-
   const moved = !lastMyPos || distMetros(lastMyPos, newPos) >= GPS_THRESHOLD_M;
   myPos = newPos;
   if(moved){
@@ -749,7 +1118,6 @@ function onPos(pos){
     if(!origPos && destPos) scheduleFetchRoute();
     actualizarChipsOrigen();
   }
-
   const now = Date.now();
   if(now - lastSaved >= SAVE_MS && currentUser && currentUser.id !== 'demo-user'){
     saveLocation(lat, lng, acc);
@@ -757,9 +1125,9 @@ function onPos(pos){
   }
 }
 
-async function reverseGeocode(lat, lng){
+async function reverseGeocode(lat, lng) {
   try{
-    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=es`,{headers:{'User-Agent':'TaziApp/1.0'}});
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=es`, { headers:{'User-Agent':'TaziApp/1.0'} });
     const d = await r.json();
     if(d.address){
       const a = d.address;
@@ -770,35 +1138,38 @@ async function reverseGeocode(lat, lng){
   } catch(e){}
   return 'Mi ubicación';
 }
-function onGPSErr(e){ const m={1:'Permiso GPS denegado',2:'Ubicación no disponible',3:'Tiempo agotado'}; setSt(m[e.code]||'Error GPS', false); }
-function setSt(t, on){ document.getElementById('stext').textContent=t; document.getElementById('sdot').className='sdot'+(on?' on':''); }
+
+function onGPSErr(e) { const m={1:'Permiso GPS denegado',2:'Ubicación no disponible',3:'Tiempo agotado'}; setSt(m[e.code]||'Error GPS', false); }
+function setSt(t, on) { document.getElementById('stext').textContent=t; document.getElementById('sdot').className='sdot'+(on?' on':''); }
 
 // ═══════════════════════════════════════════
-// BÚSQUEDA
+// BÚSQUEDA / AUTOCOMPLETAR
 // ═══════════════════════════════════════════
-let acTimer=null;
+let acTimer = null;
 
-function focusOrig(){ acFocus='orig'; }
-function focusDest(){ acFocus='dest'; }
+function focusOrig() { acFocus='orig'; }
+function focusDest() { acFocus='dest'; }
 
-function onOrigSI(){
+function onOrigSI() {
   clearTimeout(acTimer);
   const q=document.getElementById('orig-input').value.trim();
   document.getElementById('btn-clear-orig').style.display=q?'block':'none';
   if(q.length<3){ document.getElementById('ac-list').style.display='none'; return; }
   acTimer=setTimeout(()=>fetchAC(q,'orig'), 350);
 }
-async function doOrigSearch(){
+
+async function doOrigSearch() {
   document.getElementById('ac-list').style.display='none';
   const q=document.getElementById('orig-input').value.trim();
   if(!q) return;
   try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+' Madrid')}&format=json&limit=1&countrycodes=es`,{headers:{'Accept-Language':'es','User-Agent':'TaziApp/1.0'}});
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+' Madrid')}&format=json&limit=1&countrycodes=es`, { headers:{'Accept-Language':'es','User-Agent':'TaziApp/1.0'} });
     const d=await r.json();
     if(d.length) pickOrigAC(d[0].lat, d[0].lon, d[0].display_name);
-  }catch(e){ console.warn(e); }
+  } catch(e){ console.warn(e); }
 }
-function pickOrigAC(lat, lon, name){
+
+function pickOrigAC(lat, lon, name) {
   const label = name.split(',')[0];
   document.getElementById('orig-input').value = label;
   document.getElementById('btn-clear-orig').style.display='block';
@@ -813,32 +1184,34 @@ function pickOrigAC(lat, lon, name){
   actualizarChipsOrigen();
   if(destPos) scheduleFetchRoute();
 }
-function clearOrig(){
+
+function clearOrig() {
   document.getElementById('orig-input').value='';
   document.getElementById('btn-clear-orig').style.display='none';
   document.getElementById('ac-list').style.display='none';
-  origPos = null;
-  origName = '';
+  origPos = null; origName = '';
   if(myPos && myMarker){ myMarker.setLatLng([myPos.lat,myPos.lng]); if(accCircle) accCircle.setLatLng([myPos.lat,myPos.lng]); }
   lastRouteKm = null;
   actualizarChipsOrigen();
   if(destPos) scheduleFetchRoute();
 }
 
-function onSI(){
+function onSI() {
   clearTimeout(acTimer);
   const q=document.getElementById('dest-input').value.trim();
   document.getElementById('btn-clear').style.display=q?'block':'none';
   if(q.length<3){ document.getElementById('ac-list').style.display='none'; return; }
   acTimer=setTimeout(()=>fetchAC(q,'dest'), 350);
 }
-async function fetchAC(q, field){
+
+async function fetchAC(q, field) {
   try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+' Madrid')}&format=json&limit=5&countrycodes=es&addressdetails=1`,{headers:{'Accept-Language':'es','User-Agent':'TaziApp/1.0'}});
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+' Madrid')}&format=json&limit=5&countrycodes=es&addressdetails=1`, { headers:{'Accept-Language':'es','User-Agent':'TaziApp/1.0'} });
     showAC(await r.json(), field);
-  }catch(e){ console.warn(e); }
+  } catch(e){ console.warn(e); }
 }
-function showAC(res, field){
+
+function showAC(res, field) {
   const box=document.getElementById('ac-list');
   if(!res.length){ box.style.display='none'; return; }
   box.innerHTML = res.map(r=>{
@@ -849,23 +1222,26 @@ function showAC(res, field){
   }).join('');
   box.style.display='block';
 }
-async function doSearch(){
+
+async function doSearch() {
   document.getElementById('ac-list').style.display='none';
   const q=document.getElementById('dest-input').value.trim();
   if(!q) return;
   try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+' Madrid')}&format=json&limit=1&countrycodes=es`,{headers:{'Accept-Language':'es','User-Agent':'TaziApp/1.0'}});
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+' Madrid')}&format=json&limit=1&countrycodes=es`, { headers:{'Accept-Language':'es','User-Agent':'TaziApp/1.0'} });
     const d=await r.json();
     if(d.length) pickAC(d[0].lat, d[0].lon, d[0].display_name);
-  }catch(e){ console.warn(e); }
+  } catch(e){ console.warn(e); }
 }
-function pickAC(lat, lon, name){
+
+function pickAC(lat, lon, name) {
   document.getElementById('dest-input').value=name.split(',')[0];
   document.getElementById('ac-list').style.display='none';
   document.getElementById('btn-clear').style.display='block';
   setDest(parseFloat(lat), parseFloat(lon), name.split(',')[0]);
 }
-function clearDest(){
+
+function clearDest() {
   document.getElementById('dest-input').value='';
   document.getElementById('btn-clear').style.display='none';
   document.getElementById('ac-list').style.display='none';
@@ -884,15 +1260,12 @@ function clearDest(){
 // ═══════════════════════════════════════════
 // DESTINO
 // ═══════════════════════════════════════════
-function setDest(lat, lng, name){
+function setDest(lat, lng, name) {
   destPos = { lat, lng };
   const pin=`<svg width="26" height="36" viewBox="0 0 26 36" fill="none"><path d="M13 0C5.82 0 0 5.82 0 13c0 9.1 13 23 13 23S26 22.1 26 13C26 5.82 20.18 0 13 0z" fill="#ea4335"/><circle cx="13" cy="13" r="5.5" fill="white"/></svg>`;
   const icon=L.divIcon({ className:'', html:pin, iconSize:[26,36], iconAnchor:[13,36] });
-  if(destMarker){
-    destMarker.setLatLng([lat,lng]);
-  } else {
-    destMarker = L.marker([lat,lng], { icon }).addTo(map);
-  }
+  if(destMarker){ destMarker.setLatLng([lat,lng]); }
+  else { destMarker = L.marker([lat,lng], { icon }).addTo(map); }
   destMarker.bindPopup(`<b>${name}</b>`).openPopup();
   if(!myPos) map.setView([lat,lng], 14);
   actualizarChipsOrigen();
@@ -902,15 +1275,12 @@ function setDest(lat, lng, name){
 // ═══════════════════════════════════════════
 // RUTA OSRM
 // ═══════════════════════════════════════════
-function scheduleFetchRoute(){
+function scheduleFetchRoute() {
   if(routeFetchTimeout) clearTimeout(routeFetchTimeout);
-  routeFetchTimeout = setTimeout(()=>{
-    routeFetchTimeout = null;
-    fetchRoute();
-  }, 300);
+  routeFetchTimeout = setTimeout(()=>{ routeFetchTimeout=null; fetchRoute(); }, 300);
 }
 
-async function fetchRoute(){
+async function fetchRoute() {
   const origen = origPos || myPos;
   if(!origen || !destPos) return;
   if(fetchingRoute) return;
@@ -945,28 +1315,16 @@ async function fetchRoute(){
     routeDurMin = Math.round(route.duration/60);
 
     const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
-
-    if(routeLayer){
-      routeLayer.setLatLngs(coords);
-    } else {
-      routeLayer = L.polyline(coords, {
-        color: '#1a73e8',
-        weight: 5,
-        opacity: 0.8
-      }).addTo(map);
-    }
+    if(routeLayer){ routeLayer.setLatLngs(coords); }
+    else { routeLayer = L.polyline(coords, { color:'#1a73e8', weight:5, opacity:.8 }).addTo(map); }
 
     const bounds = routeLayer.getBounds();
     const mapBounds = map.getBounds();
     if(!mapBounds.contains(bounds) || map.getZoom() < 13){
       if(!isFlying){
         isFlying = true;
-        map.flyToBounds(bounds, {
-          padding: [60,60],
-          duration: 0.8,
-          easeLinearity: 0.25
-        });
-        setTimeout(()=>{ isFlying = false; }, 1000);
+        map.flyToBounds(bounds, { padding:[60,60], duration:.8, easeLinearity:.25 });
+        setTimeout(()=>{ isFlying=false; }, 1000);
       }
     }
 
@@ -988,7 +1346,7 @@ async function fetchRoute(){
 }
 
 // ═══════════════════════════════════════════
-// ACTUALIZACIÓN DE CHIPS SEGÚN ORIGEN
+// CHIPS SEGÚN ORIGEN
 // ═══════════════════════════════════════════
 function actualizarChipsOrigen() {
   const tipo = detectarOrigen();
@@ -1000,19 +1358,14 @@ function actualizarChipsOrigen() {
     document.querySelector('.chip[data-key="t4"]').classList.remove('hidden');
     document.querySelector('.chip[data-key="t3"]').classList.remove('hidden');
     const centroM30 = { lat: 40.4168, lng: -3.7038 };
-    if (destPos && distanciaKm(destPos, centroM30) <= 8) {
-      tarifaPorDefecto = 't4';
-    } else {
-      tarifaPorDefecto = 't3';
-    }
+    tarifaPorDefecto = (destPos && distanciaKm(destPos, centroM30) <= 8) ? 't4' : 't3';
   } else if (tipo === 'estacion') {
     document.querySelector('.chip[data-key="t7"]').classList.remove('hidden');
     tarifaPorDefecto = 't7';
   } else {
     document.querySelector('.chip[data-key="t1"]').classList.remove('hidden');
     document.querySelector('.chip[data-key="t2"]').classList.remove('hidden');
-    const esDiurno = esHorarioDiurno();
-    tarifaPorDefecto = esDiurno ? 't1' : 't2';
+    tarifaPorDefecto = esHorarioDiurno() ? 't1' : 't2';
   }
 
   const chipActivo = document.querySelector(`.chip[data-key="${tarifaPorDefecto}"]`);
@@ -1027,7 +1380,7 @@ function actualizarChipsOrigen() {
 // ═══════════════════════════════════════════
 // CÁLCULO DE PRECIO
 // ═══════════════════════════════════════════
-function esHorarioDiurno(){
+function esHorarioDiurno() {
   const ahora = new Date();
   const dia = ahora.getDay();
   const hora = ahora.getHours() + ahora.getMinutes()/60;
@@ -1035,20 +1388,18 @@ function esHorarioDiurno(){
   return !esFinDeSemana && (hora >= 7 && hora < 21);
 }
 
-function setTarifa(key, el){
+function setTarifa(key, el) {
   tarifaKey = key;
   document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
   el.classList.add('active');
   if(routeKm != null) calcPrice();
 }
 
-function fmt(n){ return n.toFixed(2)+' €'; }
+function fmt(n) { return n.toFixed(2)+' €'; }
 
-function setHTML(el, html){
-  if(el.innerHTML !== html) el.innerHTML = html;
-}
+function setHTML(el, html) { if(el.innerHTML !== html) el.innerHTML = html; }
 
-function calcPrice(){
+function calcPrice() {
   if(routeKm == null) return;
   const t = TARIFAS[tarifaKey];
   const pc = document.getElementById('price-card');
@@ -1070,16 +1421,14 @@ function calcPrice(){
     const esDiurno = esHorarioDiurno();
     const kmTarifa = esDiurno ? t.km_t1 : t.km_t2;
     const nombreTarifa = esDiurno ? 'T1 (diurna)' : 'T2 (nocturna/festivo)';
-    let precio, desglose;
+    let precio;
     if(routeKm <= t.franquicia_km){
       precio = t.minimo;
-      desglose = `Los ${routeKm.toFixed(1)} km están dentro de la franquicia de ${t.franquicia_km} km → se aplica el mínimo de 22,00 €.`;
     } else {
       const kmExtra = routeKm - t.franquicia_km;
-      const extra = kmExtra * kmTarifa;
-      precio = t.minimo + extra;
-      desglose = `22,00 € (primeros ${t.franquicia_km} km) + ${fmt(extra)} (${kmExtra.toFixed(1)} km extra a ${fmt(kmTarifa)}/km en ${nombreTarifa})`;
+      precio = t.minimo + (kmExtra * kmTarifa);
     }
+    const kmExtra = Math.max(0, routeKm - t.franquicia_km);
     setHTML(pc, `
       <div class="price-meter">
         <div class="pm-left"><div class="pm-label">Precio estimado</div><div class="pm-main">${fmt(precio)}</div></div>
@@ -1088,10 +1437,10 @@ function calcPrice(){
       <div class="tarifa-explain">
         <div class="te-title">📋 Cómo se calcula T3</div>
         <div class="te-row"><span>Mínimo (primeros ${t.franquicia_km} km)</span><span class="te-val">22,00 €</span></div>
-        ${routeKm > t.franquicia_km ? `<div class="te-row"><span>Km extra (${(routeKm - t.franquicia_km).toFixed(1)} km × ${kmTarifa.toFixed(2)} €/km)</span><span class="te-val">${fmt((routeKm - t.franquicia_km) * kmTarifa)}</span></div>` : ''}
+        ${kmExtra > 0 ? `<div class="te-row"><span>Km extra (${kmExtra.toFixed(1)} km × ${kmTarifa.toFixed(2)} €/km)</span><span class="te-val">${fmt(kmExtra * kmTarifa)}</span></div>` : ''}
         <div class="te-row"><span>Total estimado</span><span class="te-val">${fmt(precio)}</span></div>
       </div>
-      <p class="info-note">${desglose}<br/>El exceso se calcula con ${nombreTarifa} según la hora actual.</p>`);
+      <p class="info-note">El exceso se calcula con ${nombreTarifa} según la hora actual.</p>`);
     return;
   }
 
@@ -1100,14 +1449,8 @@ function calcPrice(){
     const kmTarifa = esDiurno ? t.km : t.km_noche;
     const nombreTarifa = esDiurno ? 'T1 (diurna)' : 'T2 (nocturna/festivo)';
     const franquicia_km = t.franquicia_m / 1000;
-    let precio;
-    if(routeKm <= franquicia_km){
-      precio = t.salida;
-    } else {
-      const kmExtra = routeKm - franquicia_km;
-      precio = t.salida + (kmExtra * kmTarifa);
-    }
     const kmExtra = Math.max(0, routeKm - franquicia_km);
+    const precio = t.salida + (kmExtra * kmTarifa);
     setHTML(pc, `
       <div class="price-meter">
         <div class="pm-left"><div class="pm-label">Precio estimado</div><div class="pm-main">${fmt(precio)}</div></div>
@@ -1123,7 +1466,7 @@ function calcPrice(){
     return;
   }
 
-  // T1 / T2 normal
+  // T1 / T2
   let precio = t.bandera + (routeKm * t.km);
   precio = Math.max(precio, t.min);
   setHTML(pc, `
@@ -1147,7 +1490,7 @@ function calcPrice(){
 // ═══════════════════════════════════════════
 // GUARDAR UBICACIÓN
 // ═══════════════════════════════════════════
-async function saveLocation(lat, lng, acc){
+async function saveLocation(lat, lng, acc) {
   if(!currentUser || currentUser.id === 'demo-user') return;
   if(!supabaseReady) return;
   try{
@@ -1155,18 +1498,19 @@ async function saveLocation(lat, lng, acc){
   } catch(e){ console.warn('save:', e.message); }
 }
 
+// Cerrar autocomplete al tocar fuera
 document.addEventListener('click', e=>{
   if(!e.target.closest('#search-bar')) document.getElementById('ac-list').style.display='none';
 });
 
 // ═══════════════════════════════════════════
-// REGISTRO DEL SERVICE WORKER (PWA)
+// SERVICE WORKER (PWA)
 // ═══════════════════════════════════════════
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js')
-      .then(reg => console.log('Service Worker registrado correctamente'))
-      .catch(err => console.warn('Error al registrar SW:', err));
+      .then(() => console.log('SW registrado'))
+      .catch(err => console.warn('SW error:', err));
   });
 }
 </script>
