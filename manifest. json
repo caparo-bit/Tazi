@@ -1,21 +1,22 @@
 {
   "name": "Tazi · Madrid",
   "short_name": "Tazi",
-  "description": "Calcula el precio de tu taxi en Madrid",
-  "start_url": "/",
+  "description": "Taxi en Madrid con precios oficiales",
+  "start_url": "/Tazi/",
+  "scope": "/Tazi/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0f1117",
   "theme_color": "#0f1117",
-  "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "/Tazi/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "icon-512.png",
+      "src": "/Tazi/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
