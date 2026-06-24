@@ -19,7 +19,7 @@
     }
     .container {
       width: 100%;
-      max-width: 1200px;
+      max-width: 1300px;
       background: #1a1a2e;
       border-radius: 20px;
       border: 1px solid #2a2a45;
@@ -48,6 +48,8 @@
     .btn-success:hover { background: #34a853; color: #fff; }
     .btn-primary { border-color: #1a73e8; color: #1a73e8; }
     .btn-primary:hover { background: #1a73e8; color: #fff; }
+    .btn-warning { border-color: #fbbc04; color: #fbbc04; }
+    .btn-warning:hover { background: #fbbc04; color: #0f1117; }
 
     .login-box {
       max-width: 360px;
@@ -85,7 +87,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
     }
     th {
       text-align: left;
@@ -93,6 +95,7 @@
       color: #6b7280;
       font-weight: 600;
       border-bottom: 1px solid #2a2a45;
+      white-space: nowrap;
     }
     td {
       padding: 0.6rem 0.5rem;
@@ -101,7 +104,7 @@
     }
     td .actions {
       display: flex;
-      gap: 0.4rem;
+      gap: 0.3rem;
       flex-wrap: wrap;
     }
     .badge-role {
@@ -116,13 +119,15 @@
     .badge-role.admin { background: #1a73e8; color: white; }
     .badge-role.conductor { background: #34a853; color: white; }
     .badge-role.conductor_pendiente { background: #fbbc04; color: #0f1117; }
+    .badge-confirmed { background: #34a853; color: white; padding: 1px 8px; border-radius: 12px; font-size: 0.7rem; }
+    .badge-pending { background: #fbbc04; color: #0f1117; padding: 1px 8px; border-radius: 12px; font-size: 0.7rem; }
 
     .add-form {
       margin-top: 2rem;
       padding-top: 1.5rem;
       border-top: 1px solid #2a2a45;
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
       gap: 0.8rem 1rem;
       align-items: end;
     }
@@ -166,8 +171,8 @@
     @media (max-width: 640px) {
       .container { padding: 1rem; }
       .add-form { grid-template-columns: 1fr; }
-      table { font-size: 0.75rem; }
-      th, td { padding: 0.4rem 0.3rem; }
+      table { font-size: 0.7rem; }
+      th, td { padding: 0.3rem 0.2rem; }
     }
 
     .toast {
@@ -214,7 +219,7 @@
     <div class="admin-header">
       <div>
         <h1>🧑‍💼 Gestión de conductores</h1>
-        <p class="sub">Administra todos los perfiles de conductores registrados</p>
+        <p class="sub">Administra todos los perfiles y su acceso</p>
       </div>
       <div class="user-info">
         <span id="admin-name"></span> · 
@@ -230,9 +235,9 @@
             <th>Email</th>
             <th>Teléfono</th>
             <th>Vehículo</th>
-            <th>Matrícula</th>
-            <th>Licencia</th>
             <th>Rol</th>
+            <th>Último acceso</th>
+            <th>Confirmado</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -338,15 +343,10 @@ async function adminLogin() {
   }
 }
 
-// ── Cargar usuarios (ordenados por updated_at) ──
+// ── Cargar usuarios usando la función RPC ──
 async function cargarUsuarios() {
   try {
-    const { data, error } = await sb
-      .from('perfiles')
-      .select('*')
-      .in('rol', ['conductor', 'conductor_pendiente'])
-      .order('updated_at', { ascending: false });
-
+    const { data, error } = await sb.rpc('get_conductores_con_auth');
     if (error) throw error;
     renderizarUsuarios(data || []);
   } catch (err) {
@@ -364,18 +364,22 @@ function renderizarUsuarios(lista) {
   lista.forEach(u => {
     const rolClass = u.rol === 'conductor' ? 'conductor' : 'conductor_pendiente';
     const rolLabel = u.rol === 'conductor' ? 'Conductor' : 'Pendiente';
+    const lastAccess = u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString() : 'Nunca';
+    const confirmed = u.confirmed_at ? '✅ Confirmado' : '⏳ Pendiente';
+    const confirmedClass = u.confirmed_at ? 'badge-confirmed' : 'badge-pending';
     html += `
       <tr>
         <td><strong>${u.nombre || '—'}</strong></td>
         <td>${u.email || '—'}</td>
         <td>${u.telefono || '—'}</td>
         <td>${u.vehiculo || '—'}</td>
-        <td>${u.matricula || '—'}</td>
-        <td>${u.licencia || '—'}</td>
         <td><span class="badge-role ${rolClass}">${rolLabel}</span></td>
+        <td style="font-size:0.75rem;">${lastAccess}</td>
+        <td><span class="${confirmedClass}">${confirmed}</span></td>
         <td>
           <div class="actions">
             <button class="btn btn-primary" onclick="cambiarRol('${u.id}')" style="padding:0.2rem 0.6rem;font-size:0.7rem;">Cambiar rol</button>
+            <button class="btn btn-warning" onclick="resetPassword('${u.email}')" style="padding:0.2rem 0.6rem;font-size:0.7rem;">Reset pass</button>
             <button class="btn btn-danger" onclick="eliminarUsuario('${u.id}')" style="padding:0.2rem 0.6rem;font-size:0.7rem;">Eliminar</button>
           </div>
         </td>
@@ -410,6 +414,21 @@ async function cambiarRol(id) {
   }
 }
 
+// ── Restablecer contraseña (envía email de reset) ──
+async function resetPassword(email) {
+  if (!email) return alert('El usuario no tiene email asociado.');
+  if (!confirm(`¿Enviar enlace de restablecimiento a ${email}?`)) return;
+  try {
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/reset-password.html' // Cambia si tienes una página de reset
+    });
+    if (error) throw error;
+    toast('✅ Enlace de restablecimiento enviado a ' + email);
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+}
+
 // ── Eliminar usuario ──
 async function eliminarUsuario(id) {
   if (!confirm('¿Eliminar este usuario definitivamente?')) return;
@@ -427,7 +446,7 @@ async function eliminarUsuario(id) {
   }
 }
 
-// ── Añadir usuario (sin created_at) ──
+// ── Añadir usuario (con email) ──
 async function addUsuario() {
   const nombre   = document.getElementById('new-nombre').value.trim();
   const email    = document.getElementById('new-email').value.trim();
@@ -464,7 +483,7 @@ async function addUsuario() {
     const uid = data.user?.id;
     if (!uid) throw new Error('No se pudo crear el usuario.');
 
-    // 2. Insertar perfil (sin created_at, solo updated_at)
+    // 2. Insertar perfil (con email y updated_at)
     const { error: perfilError } = await sb.from('perfiles').insert({
       id: uid,
       nombre,
