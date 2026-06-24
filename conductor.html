@@ -168,7 +168,7 @@
         <div class="field-label">Datos del vehículo</div>
         <input id="reg-vehiculo" type="text" placeholder="Marca y modelo (ej. Toyota Prius)" />
         <input id="reg-matricula" type="text" placeholder="Matrícula (ej. 1234 ABC)" style="text-transform:uppercase;" />
-        <input id="reg-licencia" type="text" placeholder="Nº licencia / Taxi" />
+        <input id="reg-licencia" type="text" placeholder="Nº licencia VTC / Taxi" />
       </div>
       <button class="btn-main" onclick="registrarConductor()">Solicitar registro</button>
       <div id="reg-error" class="error"></div>
@@ -359,12 +359,20 @@ function logoutPendiente() {
 }
 
 // ── Iniciar app ──
+let pollingInterval = null;
+
 function iniciarApp() {
   mostrarApp();
   initMap();
   startGPS();
-  cargarSolicitudes();
-  suscribirSolicitudes();
+  // Pequeño delay para que el mapa esté listo antes de añadir marcadores
+  setTimeout(() => {
+    cargarSolicitudes();
+    suscribirSolicitudes();
+    // Polling de respaldo cada 10s por si Realtime falla
+    if (pollingInterval) clearInterval(pollingInterval);
+    pollingInterval = setInterval(cargarSolicitudes, 10000);
+  }, 500);
 }
 
 // ── Mapa ──
@@ -381,27 +389,37 @@ function initMap() {
 // ── GPS ──
 function startGPS() {
   if (!navigator.geolocation) return;
-  watchId = navigator.geolocation.watchPosition(
-    pos => {
-      const { latitude, longitude } = pos.coords;
-      conductorPos = { lat: latitude, lng: longitude };
-      const ll = [latitude, longitude];
-      if (!myMarker) {
-        const icon = L.divIcon({
-          html: '<div style="background:#4285f4;width:16px;height:16px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 4px rgba(66,133,244,0.3);"></div>',
-          iconSize: [16,16],
-          iconAnchor: [8,8]
-        });
-        myMarker = L.marker(ll, { icon }).addTo(map);
-      } else {
-        myMarker.setLatLng(ll);
-      }
-      map.setView(ll, 14);
-      cargarSolicitudes();
-    },
+  navigator.geolocation.getCurrentPosition(
+    pos => aplicarPosConductor(pos),
     err => console.warn('GPS error', err),
-    { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+    { enableHighAccuracy: true, timeout: 10000 }
   );
+  watchId = navigator.geolocation.watchPosition(
+    pos => aplicarPosConductor(pos),
+    err => console.warn('GPS watch error', err),
+    { enableHighAccuracy: true, maximumAge: 15000, timeout: 15000 }
+  );
+}
+
+function aplicarPosConductor(pos) {
+  const { latitude, longitude } = pos.coords;
+  const nueva = { lat: latitude, lng: longitude };
+  if (conductorPos) {
+    const d = distanciaKm(conductorPos.lat, conductorPos.lng, latitude, longitude) * 1000;
+    if (d < 20) return;
+  }
+  conductorPos = nueva;
+  const ll = [latitude, longitude];
+  if (!myMarker) {
+    const icon = L.divIcon({
+      html: '<div style="background:#4285f4;width:16px;height:16px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 4px rgba(66,133,244,0.3);"></div>',
+      iconSize: [16,16], iconAnchor: [8,8]
+    });
+    myMarker = L.marker(ll, { icon }).addTo(map);
+    map.setView(ll, 14);
+  } else {
+    myMarker.setLatLng(ll);
+  }
 }
 
 // ── Solicitudes ──
@@ -414,8 +432,6 @@ function distanciaKm(lat1, lng1, lat2, lng2) {
 }
 
 async function cargarSolicitudes() {
-  if (!conductorPos) return;
-
   try {
     const { data, error } = await sb
       .from('solicitudes')
@@ -429,7 +445,7 @@ async function cargarSolicitudes() {
   } catch (err) {
     console.error('Error cargando solicitudes:', err);
     document.getElementById('solicitudes-container').innerHTML =
-      '<div class="empty-state"><div class="icon">⚠️</div>Error al cargar solicitudes</div>';
+      '<div class="empty-state"><div class="icon">⚠️</div>Error: ' + err.message + '</div>';
   }
 }
 
@@ -602,17 +618,33 @@ async function aceptarSolicitud(id) {
 // ── Suscripción en tiempo real ──
 function suscribirSolicitudes() {
   if (channel) sb.removeChannel(channel);
-  channel = sb.channel('solicitudes-pendientes');
-  channel.on(
-    'postgres_changes',
-    {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'solicitudes',
-      filter: 'estado=eq.pendiente'
-    },
-    () => cargarSolicitudes()
-  ).subscribe();
+
+  channel = sb
+    .channel('conductor-solicitudes-' + currentUser.id)
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'solicitudes' },
+      payload => {
+        console.log('Realtime INSERT:', payload.new);
+        // Sin filtro server-side (requiere REPLICA IDENTITY FULL en Supabase)
+        // Filtramos en cliente
+        if (payload.new?.estado === 'pendiente' && !payload.new?.conductor_id) {
+          cargarSolicitudes();
+          toast('🚖 Nueva solicitud recibida');
+        }
+      }
+    )
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'solicitudes' },
+      () => cargarSolicitudes()
+    )
+    .subscribe(status => {
+      console.log('Realtime status:', status);
+      if (status === 'SUBSCRIBED') {
+        toast('📡 Conectado en tiempo real');
+      }
+    });
 }
 
 // ── Toast ──
@@ -641,6 +673,7 @@ function toast(msg) {
 function logout() {
   if (watchId) navigator.geolocation.clearWatch(watchId);
   if (channel) sb.removeChannel(channel);
+  if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
   sb.auth.signOut();
   currentUser = null;
   mostrarAuth();
