@@ -414,16 +414,16 @@ async function cambiarRol(id) {
   }
 }
 
-// ── Restablecer contraseña (envía email de reset) ──
+// ── Restablecer contraseña ──
 async function resetPassword(email) {
   if (!email) return alert('El usuario no tiene email asociado.');
   if (!confirm(`¿Enviar enlace de restablecimiento a ${email}?`)) return;
   try {
     const { error } = await sb.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + '/reset-password.html' // Cambia si tienes una página de reset
+      redirectTo: window.location.origin + '/reset-password.html'
     });
     if (error) throw error;
-    toast('✅ Enlace de restablecimiento enviado a ' + email);
+    toast('✅ Enlace enviado a ' + email);
   } catch (err) {
     alert('Error: ' + err.message);
   }
@@ -438,15 +438,14 @@ async function eliminarUsuario(id) {
       .delete()
       .eq('id', id);
     if (error) throw error;
-
-    toast('Usuario eliminado correctamente.');
+    toast('Usuario eliminado.');
     cargarUsuarios();
   } catch (err) {
-    alert('Error al eliminar: ' + err.message);
+    alert('Error: ' + err.message);
   }
 }
 
-// ── Añadir usuario (con email) ──
+// ── Añadir usuario ──
 async function addUsuario() {
   const nombre   = document.getElementById('new-nombre').value.trim();
   const email    = document.getElementById('new-email').value.trim();
@@ -457,7 +456,6 @@ async function addUsuario() {
   const password = document.getElementById('new-password').value;
   const rol      = document.getElementById('new-rol').value;
   const msgDiv   = document.getElementById('add-message');
-
   msgDiv.textContent = '';
 
   if (!nombre || !email || !telefono || !vehiculo || !matricula || !password) {
@@ -476,14 +474,11 @@ async function addUsuario() {
   btn.textContent = 'Creando...';
 
   try {
-    // 1. Crear usuario en Auth
     const { data, error } = await sb.auth.signUp({ email, password });
     if (error) throw error;
-
     const uid = data.user?.id;
     if (!uid) throw new Error('No se pudo crear el usuario.');
 
-    // 2. Insertar perfil (con email y updated_at)
     const { error: perfilError } = await sb.from('perfiles').insert({
       id: uid,
       nombre,
@@ -499,7 +494,6 @@ async function addUsuario() {
 
     msgDiv.style.color = '#34a853';
     msgDiv.textContent = '✅ Usuario creado correctamente.';
-    // Limpiar formulario
     document.getElementById('new-nombre').value = '';
     document.getElementById('new-email').value = '';
     document.getElementById('new-telefono').value = '';
@@ -537,7 +531,7 @@ function toast(msg) {
   el._timer = setTimeout(() => el.classList.remove('show'), 3000);
 }
 
-// ── Verificar sesión activa al cargar ──
+// ── Sesión activa ──
 sb.auth.getSession().then(({ data: { session } }) => {
   if (session?.user) {
     sb.from('perfiles').select('rol, nombre').eq('id', session.user.id).single()
