@@ -254,7 +254,7 @@
     <div id="tarifa-section" class="section" style="display:none;">
       <div class="section-title">Tarifa oficial Madrid 2026</div>
       <div id="chips-container">
-        <button class="chip active" data-key="t1" onclick="setTarifa('t1',this)">T1 · Día</button>
+        <button class="chip" data-key="t1" onclick="setTarifa('t1',this)">T1 · Día</button>
         <button class="chip" data-key="t2" onclick="setTarifa('t2',this)">T2 · Noche/Fest.</button>
         <button class="chip" data-key="t4" onclick="setTarifa('t4',this)">✈️ Apto→M30</button>
         <button class="chip" data-key="t3" onclick="setTarifa('t3',this)">✈️ Apto→fuera M30</button>
@@ -315,6 +315,54 @@ try {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// TARIFAS (oficiales Madrid 2026)
+// ═══════════════════════════════════════════════════════════════════
+const TARIFAS = {
+  t1: { id:'T1', nombre:'Laborable diurno', horario:'Lun–Vie 7:00–21:00 h', tipo:'metro', bandera:2.55, km:1.40, min:4.50 },
+  t2: { id:'T2', nombre:'Nocturno y festivos', horario:'Diario 21:00–7:00 h · Sáb/Dom/Fest 7:00–21:00 h', tipo:'metro', bandera:3.20, km:1.60, min:5.50 },
+  t4: { id:'T4', nombre:'Aeropuerto → dentro M-30', horario:'24h · 365 días', tipo:'fijo', precio_fijo:33.00, nota:'Tarifa fija aeropuerto a cualquier punto dentro de la M-30' },
+  t3: { id:'T3', nombre:'Aeropuerto → fuera M-30', horario:'24h · 365 días', tipo:'minimo_luego_metro', minimo:22.00, franquicia_km:9.0, km_t1:1.40, km_t2:1.60, nota:'Mínimo 22€ cubre 9 km, luego T1/T2' },
+  t7: { id:'T7', nombre:'Estaciones y IFEMA', horario:'24h · 365 días', tipo:'salida_especial', salida:8.00, franquicia_m:1450, km:1.40, km_noche:1.60, nota:'Salida especial: Atocha, Chamartín, Av. América, Méndez Álvaro, IFEMA' }
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// DETECCIÓN DE ORIGEN (aeropuerto, estación, ciudad)
+// ═══════════════════════════════════════════════════════════════════
+const AIRPORT_COORDS = { lat: 40.4722, lng: -3.5604 };
+const AIRPORT_RADIUS_KM = 4.0;
+const STATION_COORDS = [
+  { lat: 40.4060, lng: -3.6897 },  // Atocha
+  { lat: 40.4729, lng: -3.6823 },  // Chamartín
+  { lat: 40.4379, lng: -3.6774 },  // Av. América
+  { lat: 40.4011, lng: -3.6787 },  // Méndez Álvaro
+  { lat: 40.4695, lng: -3.5988 }   // IFEMA
+];
+const STATION_RADIUS_KM = 0.8;
+const CENTRO_M30 = { lat: 40.4168, lng: -3.7038 };
+
+function distanciaKm(a, b) {
+  const R = 6371;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLng = (b.lng - a.lng) * Math.PI / 180;
+  const a1 = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.asin(Math.sqrt(a1));
+}
+
+function detectarOrigen() {
+  const origen = origPos || myPos;
+  if (!origen) return 'ciudad';
+  const nombre = (origName || '').toLowerCase();
+  if (nombre.includes('aeropuerto') || nombre.includes('barajas')) return 'aeropuerto';
+  const estacionesNombres = ['atocha', 'chamartín', 'américa', 'méndez álvaro', 'méndez alvaro', 'ifema'];
+  if (estacionesNombres.some(s => nombre.includes(s))) return 'estacion';
+  if (distanciaKm(origen, AIRPORT_COORDS) <= AIRPORT_RADIUS_KM) return 'aeropuerto';
+  for (let st of STATION_COORDS) {
+    if (distanciaKm(origen, st) <= STATION_RADIUS_KM) return 'estacion';
+  }
+  return 'ciudad';
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // ESTADO GLOBAL
 // ═══════════════════════════════════════════════════════════════════
 let currentUser = null;
@@ -338,17 +386,6 @@ let solicitudTimer = null;
 let solicitudAceptada = false;
 let solicitudAceptadaTimestamp = null;
 let solicitudPendingCancel = false;
-
-// ═══════════════════════════════════════════════════════════════════
-// TARIFAS
-// ═══════════════════════════════════════════════════════════════════
-const TARIFAS = {
-  t1: { id:'T1', nombre:'Laborable diurno', horario:'Lun–Vie 7:00–21:00 h', tipo:'metro', bandera:2.55, km:1.40, min:4.50 },
-  t2: { id:'T2', nombre:'Nocturno y festivos', horario:'Diario 21:00–7:00 h · Sáb/Dom/Fest 7:00–21:00 h', tipo:'metro', bandera:3.20, km:1.60, min:5.50 },
-  t4: { id:'T4', nombre:'Aeropuerto → dentro M-30', horario:'24h · 365 días', tipo:'fijo', precio_fijo:33.00 },
-  t3: { id:'T3', nombre:'Aeropuerto → fuera M-30', horario:'24h · 365 días', tipo:'minimo_luego_metro', minimo:22.00, franquicia_km:9.0, km_t1:1.40, km_t2:1.60 },
-  t7: { id:'T7', nombre:'Estaciones y IFEMA', horario:'24h · 365 días', tipo:'salida_especial', salida:8.00, franquicia_m:1450, km:1.40, km_noche:1.60 }
-};
 
 // ═══════════════════════════════════════════════════════════════════
 // AUTH
@@ -399,7 +436,7 @@ async function doRegister() {
     const { data, error } = await sb.auth.signUp({ email, password: pass });
     if (error) throw error;
     success.textContent = '✅ Cuenta creada. ¡Revisa tu correo para confirmar!';
-    // Opcional: iniciar sesión automáticamente si no requiere confirmación
+    // Iniciar sesión automáticamente si no requiere confirmación
     const { error: loginError } = await sb.auth.signInWithPassword({ email, password: pass });
     if (!loginError) {
       currentUser = data.user;
@@ -481,7 +518,7 @@ function toggleFull() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// GPS
+// GPS (sin parpadeo)
 // ═══════════════════════════════════════════════════════════════════
 function startGPS() {
   const status = document.getElementById('gps-status');
@@ -496,7 +533,17 @@ function startGPS() {
       const { latitude, longitude } = pos.coords;
       myPos = { lat: latitude, lng: longitude };
       status.textContent = `📍 Ubicación obtenida (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
-      updateMyMarker();
+      // Actualizar marcador sin recrearlo (evita parpadeo)
+      if (myMarker) {
+        myMarker.setLatLng([latitude, longitude]);
+      } else {
+        const icon = L.divIcon({
+          html: '<div style="background:#4285f4;width:16px;height:16px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 4px rgba(66,133,244,0.3);"></div>',
+          iconSize: [16,16],
+          iconAnchor: [8,8]
+        });
+        myMarker = L.marker([latitude, longitude], { icon }).addTo(map);
+      }
       centerMap();
       if (destPos) fetchRoute();
     },
@@ -512,23 +559,18 @@ function startGPS() {
 function setDefaultPosition() {
   myPos = { lat: 40.4168, lng: -3.7038 };
   document.getElementById('gps-status').textContent = '📍 Ubicación: Madrid (centro)';
-  updateMyMarker();
+  if (myMarker) {
+    myMarker.setLatLng([myPos.lat, myPos.lng]);
+  } else {
+    const icon = L.divIcon({
+      html: '<div style="background:#4285f4;width:16px;height:16px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 4px rgba(66,133,244,0.3);"></div>',
+      iconSize: [16,16],
+      iconAnchor: [8,8]
+    });
+    myMarker = L.marker([myPos.lat, myPos.lng], { icon }).addTo(map);
+  }
   centerMap();
   if (destPos) fetchRoute();
-}
-
-function updateMyMarker() {
-  if (!map || !myPos) return;
-  const icon = L.divIcon({
-    html: '<div style="background:#4285f4;width:16px;height:16px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 4px rgba(66,133,244,0.3);"></div>',
-    iconSize: [16,16],
-    iconAnchor: [8,8]
-  });
-  if (!myMarker) {
-    myMarker = L.marker([myPos.lat, myPos.lng], { icon }).addTo(map);
-  } else {
-    myMarker.setLatLng([myPos.lat, myPos.lng]);
-  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -648,6 +690,9 @@ function fetchRoute() {
       document.getElementById('route-time').textContent = '~' + duration + ' min';
       document.getElementById('tarifa-section').style.display = 'block';
       document.getElementById('solicitar-section').style.display = 'block';
+      
+      // Aplicar tarifa automática según origen
+      aplicarTarifaAutomatica();
       calcPrice();
     })
     .catch(err => {
@@ -657,26 +702,50 @@ function fetchRoute() {
       const R = 6371;
       const dLat = (destPos.lat - myPos.lat) * Math.PI / 180;
       const dLng = (destPos.lng - myPos.lng) * Math.PI / 180;
-      const a = Math.sin(dLat/2)**2 + Math.cos(myPos.lat*Math.PI/180)*Math.cos(destPos.lat*Math.PI/180)*Math.sin(dLng/2)**2;
-      const dist = R * 2 * Math.asin(Math.sqrt(a));
+      const a1 = Math.sin(dLat/2)**2 + Math.cos(myPos.lat*Math.PI/180)*Math.cos(destPos.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+      const dist = R * 2 * Math.asin(Math.sqrt(a1));
       routeKm = dist * 1.3;
       document.getElementById('route-card').style.display = 'block';
       document.getElementById('route-km').textContent = routeKm.toFixed(1) + ' km (estimado)';
       document.getElementById('route-time').textContent = '—';
       document.getElementById('tarifa-section').style.display = 'block';
       document.getElementById('solicitar-section').style.display = 'block';
+      aplicarTarifaAutomatica();
       calcPrice();
     });
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// TARIFAS Y PRECIO
+// TARIFAS Y PRECIO (con detección automática)
 // ═══════════════════════════════════════════════════════════════════
 function esHorarioDiurno() {
   const ahora = new Date();
   const dia = ahora.getDay();
   const hora = ahora.getHours() + ahora.getMinutes()/60;
   return dia !== 0 && dia !== 6 && (hora >= 7 && hora < 21);
+}
+
+function aplicarTarifaAutomatica() {
+  const tipo = detectarOrigen();
+  let tarifaSeleccionada = 't1';
+
+  if (tipo === 'aeropuerto') {
+    // Si destino dentro de M30 (distancia <= 8 km del centro) -> T4, sino T3
+    const dentroM30 = destPos && distanciaKm(destPos, CENTRO_M30) <= 8;
+    tarifaSeleccionada = dentroM30 ? 't4' : 't3';
+  } else if (tipo === 'estacion') {
+    tarifaSeleccionada = 't7';
+  } else {
+    tarifaSeleccionada = esHorarioDiurno() ? 't1' : 't2';
+  }
+
+  // Activar el chip correspondiente
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  const chip = document.querySelector(`.chip[data-key="${tarifaSeleccionada}"]`);
+  if (chip) {
+    chip.classList.add('active');
+    tarifaKey = tarifaSeleccionada;
+  }
 }
 
 function setTarifa(key, el) {
@@ -791,7 +860,6 @@ async function solicitarTaxi() {
       data = result.data;
       error = result.error;
     } else {
-      // Modo local: simular
       await new Promise(r => setTimeout(r, 500));
       data = { id: Date.now(), ...solicitud };
       error = null;
@@ -804,7 +872,6 @@ async function solicitarTaxi() {
     btn.textContent = '⏳ Esperando...';
     cancelBtn.style.display = 'inline-block';
 
-    // Temporizador de 10s para cancelar sin penalización
     let segundos = 10;
     solicitudTimer = setInterval(() => {
       segundos--;
@@ -817,11 +884,10 @@ async function solicitarTaxi() {
       }
     }, 1000);
 
-    // Suscribirse a cambios en la solicitud
     if (supabaseReady && sb) {
       suscribirSolicitud(solicitudId);
     } else {
-      // Modo local: simular aceptación después de 10 segundos
+      // Simulación local
       setTimeout(() => {
         if (solicitudId) {
           estado.textContent = '✅ Taxi aceptado! Tienes 2 minutos para cancelar sin cargo.';
@@ -829,7 +895,6 @@ async function solicitarTaxi() {
           solicitudAceptada = true;
           solicitudAceptadaTimestamp = Date.now();
           btn.textContent = '✅ Taxi en camino';
-          // Temporizador de 2 minutos para cancelar sin cargo
           let segundos2 = 120;
           solicitudTimer = setInterval(() => {
             segundos2--;
@@ -913,7 +978,6 @@ async function cargarConductor(conductorId) {
   } catch(e) {}
 }
 
-// ── Cancelar solicitud ──
 function cancelarSolicitud() {
   if (!solicitudId) return;
   const ahora = Date.now();
@@ -970,4 +1034,4 @@ function doLogout() {
 }
 </script>
 </body>
-  </html>
+</html>
