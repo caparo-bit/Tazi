@@ -20,6 +20,7 @@
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: 'Inter', sans-serif; background: #0f1117; color: #e8e8f0; height: 100vh; overflow: hidden; }
 
+    /* ─── AUTH ─── */
     #auth-screen {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       height: 100vh; padding: 1.5rem; background: #0f1117;
@@ -44,7 +45,14 @@
     #auth-screen .btn-demo { background: #4a4a6a; color: #fff; margin-top: 0.8rem; }
     #auth-screen .btn-demo:hover { background: #5a5a7a; }
     #auth-screen .error { color: #f87171; font-size: 0.9rem; margin-top: 0.5rem; }
+    #auth-screen .link { color: #3ecf8e; cursor: pointer; text-decoration: underline; }
+    .tab { display: flex; gap: 1rem; margin-bottom: 1rem; }
+    .tab button { background: transparent; border: none; color: #6b7280; font-weight: 600; font-size: 0.9rem; cursor: pointer; padding: 0.3rem 0; border-bottom: 2px solid transparent; }
+    .tab button.active { color: #3ecf8e; border-bottom-color: #3ecf8e; }
+    .auth-form { display: none; }
+    .auth-form.active { display: block; }
 
+    /* ─── MAPA ─── */
     #map-screen {
       display: none; flex-direction: column; height: 100vh; background: #f5f5f5;
     }
@@ -58,7 +66,7 @@
     }
     .sbox-wrap {
       background: white; border-radius: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-      overflow: hidden;
+      overflow: visible;
     }
     .sbox-row {
       display: flex; align-items: center; padding: 0.4rem 0.8rem; gap: 0.5rem;
@@ -83,7 +91,7 @@
     #ac-list {
       background: white; border-radius: 14px; margin-top: 4px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: none;
-      position: absolute; width: 100%; z-index: 10;
+      position: absolute; width: 100%; z-index: 10; max-height: 200px; overflow-y: auto;
     }
     .ac-item {
       padding: 0.5rem 1rem; cursor: pointer; border-bottom: 1px solid #f0f0f0;
@@ -160,19 +168,38 @@
     .modal-box .btn-group button { flex: 1; padding: 0.6rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
     .btn-danger { background: #ea4335; color: white; }
     .btn-primary { background: #3ecf8e; color: #0f1117; }
+
+    #route-loading { display: none; text-align: center; padding: 0.5rem; color: #6b7280; font-size: 0.85rem; }
+    .spinner { display:inline-block; width:14px; height:14px; border:2px solid #ddd; border-top-color:#1a73e8; border-radius:50%; animation:spin 0.8s linear infinite; vertical-align:middle; margin-right:0.5rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
 
-<!-- ═══ LOGIN ═══ -->
+<!-- ═══ AUTH ═══ -->
 <div id="auth-screen">
   <div class="card">
     <h1>🚖 Tazi</h1>
     <p class="subtitle">Tu taxi en Madrid</p>
-    <input id="login-email" type="email" placeholder="Correo electrónico" />
-    <input id="login-password" type="password" placeholder="Contraseña" />
-    <button class="btn" onclick="doLogin()">Iniciar sesión</button>
-    <div id="login-error" class="error"></div>
+    <div class="tab">
+      <button class="active" onclick="switchTab('login')">Iniciar sesión</button>
+      <button onclick="switchTab('register')">Registrarse</button>
+    </div>
+    <!-- Login -->
+    <div id="form-login" class="auth-form active">
+      <input id="login-email" type="email" placeholder="Correo electrónico" />
+      <input id="login-password" type="password" placeholder="Contraseña" />
+      <button class="btn" onclick="doLogin()">Iniciar sesión</button>
+      <div id="login-error" class="error"></div>
+    </div>
+    <!-- Registro -->
+    <div id="form-register" class="auth-form">
+      <input id="reg-email" type="email" placeholder="Correo electrónico" />
+      <input id="reg-password" type="password" placeholder="Contraseña (mínimo 6 caracteres)" />
+      <button class="btn" onclick="doRegister()">Crear cuenta</button>
+      <div id="register-error" class="error"></div>
+      <div id="register-success" style="color:#34a853; font-size:0.9rem; margin-top:0.5rem;"></div>
+    </div>
     <button class="btn btn-demo" onclick="entrarDemo()">🚕 Entrar sin cuenta (demo)</button>
   </div>
 </div>
@@ -190,7 +217,7 @@
         </div>
         <div class="sbox-row">
           <div class="dest-dot"></div>
-          <input id="dest-input" type="text" placeholder="¿A dónde vas?" />
+          <input id="dest-input" type="text" placeholder="¿A dónde vas?" oninput="onDestInput()" />
           <button class="btn-clear" onclick="clearDest()">✕</button>
           <button class="btn-search" onclick="doSearch()">→</button>
         </div>
@@ -209,6 +236,9 @@
     <div id="no-dest" class="section">
       <div style="font-size:2rem; margin-bottom:0.5rem;">🗺️</div>
       Busca un destino para ver la ruta y el precio del taxi
+    </div>
+    <div id="route-loading" class="section">
+      <span class="spinner"></span> Calculando ruta por calles...
     </div>
     <div id="route-card" class="section" style="display:none;">
       <div class="section-title">Ruta por carretera</div>
@@ -299,8 +329,9 @@ let routeLayer = null;
 let myMarker = null;
 let destMarker = null;
 let watchId = null;
+let acTimeout = null;
 
-// Estado de la solicitud
+// Estado de solicitud
 let solicitudId = null;
 let solicitudChannel = null;
 let solicitudTimer = null;
@@ -312,82 +343,98 @@ let solicitudPendingCancel = false;
 // TARIFAS
 // ═══════════════════════════════════════════════════════════════════
 const TARIFAS = {
-  t1: { id:'T1', nombre:'Día', bandera:2.55, km:1.40, min:4.50 },
-  t2: { id:'T2', nombre:'Noche', bandera:3.20, km:1.60, min:5.50 },
-  t4: { id:'T4', nombre:'Aeropuerto → M30', tipo:'fijo', precio_fijo:33.00 },
-  t3: { id:'T3', nombre:'Aeropuerto → fuera M30', tipo:'minimo', minimo:22.00, franquicia:9.0 },
-  t7: { id:'T7', nombre:'Estaciones', tipo:'salida', salida:8.00, franquicia_m:1.45 }
+  t1: { id:'T1', nombre:'Laborable diurno', horario:'Lun–Vie 7:00–21:00 h', tipo:'metro', bandera:2.55, km:1.40, min:4.50 },
+  t2: { id:'T2', nombre:'Nocturno y festivos', horario:'Diario 21:00–7:00 h · Sáb/Dom/Fest 7:00–21:00 h', tipo:'metro', bandera:3.20, km:1.60, min:5.50 },
+  t4: { id:'T4', nombre:'Aeropuerto → dentro M-30', horario:'24h · 365 días', tipo:'fijo', precio_fijo:33.00 },
+  t3: { id:'T3', nombre:'Aeropuerto → fuera M-30', horario:'24h · 365 días', tipo:'minimo_luego_metro', minimo:22.00, franquicia_km:9.0, km_t1:1.40, km_t2:1.60 },
+  t7: { id:'T7', nombre:'Estaciones y IFEMA', horario:'24h · 365 días', tipo:'salida_especial', salida:8.00, franquicia_m:1450, km:1.40, km_noche:1.60 }
 };
 
 // ═══════════════════════════════════════════════════════════════════
 // AUTH
 // ═══════════════════════════════════════════════════════════════════
-function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
-  const pass = document.getElementById('login-password').value.trim();
-  if (!email || !pass) {
-    document.getElementById('login-error').textContent = 'Completa todos los campos.';
-    return;
-  }
-  // Si Supabase está disponible, intentar login real
-  if (supabaseReady && sb) {
-    sb.auth.signInWithPassword({ email, password: pass })
-      .then(({ data, error }) => {
-        if (error) throw error;
-        currentUser = data.user;
-        document.getElementById('auth-screen').style.display = 'none';
-        document.getElementById('map-screen').classList.add('active');
-        initMap();
-        startGPS();
-      })
-      .catch(err => {
-        document.getElementById('login-error').textContent = '❌ ' + err.message;
-      });
+function switchTab(tab) {
+  document.querySelectorAll('.tab button').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+  if (tab === 'login') {
+    document.querySelector('.tab button:first-child').classList.add('active');
+    document.getElementById('form-login').classList.add('active');
+    document.getElementById('login-error').textContent = '';
   } else {
-    // Modo local (sin Supabase)
-    currentUser = { id: 'local-user', email };
-    document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('map-screen').classList.add('active');
-    initMap();
-    startGPS();
+    document.querySelector('.tab button:last-child').classList.add('active');
+    document.getElementById('form-register').classList.add('active');
+    document.getElementById('register-error').textContent = '';
+    document.getElementById('register-success').textContent = '';
+  }
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-password').value;
+  const err = document.getElementById('login-error');
+  err.textContent = '';
+  if (!email || !pass) { err.textContent = 'Completa todos los campos.'; return; }
+  if (!supabaseReady || !sb) { err.textContent = 'Supabase no disponible. Usa el modo demo.'; return; }
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) throw error;
+    currentUser = data.user;
+    entrarApp();
+  } catch(e) {
+    err.textContent = '❌ ' + e.message;
+  }
+}
+
+async function doRegister() {
+  const email = document.getElementById('reg-email').value.trim();
+  const pass = document.getElementById('reg-password').value;
+  const err = document.getElementById('register-error');
+  const success = document.getElementById('register-success');
+  err.textContent = '';
+  success.textContent = '';
+  if (!email || !pass) { err.textContent = 'Completa todos los campos.'; return; }
+  if (pass.length < 6) { err.textContent = 'La contraseña debe tener al menos 6 caracteres.'; return; }
+  if (!supabaseReady || !sb) { err.textContent = 'Supabase no disponible. Usa el modo demo.'; return; }
+  try {
+    const { data, error } = await sb.auth.signUp({ email, password: pass });
+    if (error) throw error;
+    success.textContent = '✅ Cuenta creada. ¡Revisa tu correo para confirmar!';
+    // Opcional: iniciar sesión automáticamente si no requiere confirmación
+    const { error: loginError } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (!loginError) {
+      currentUser = data.user;
+      entrarApp();
+    }
+  } catch(e) {
+    err.textContent = '❌ ' + e.message;
   }
 }
 
 async function entrarDemo() {
-  // Intentar login automático con usuario demo en Supabase, o fallback local
   if (supabaseReady && sb) {
     try {
-      // Intentar iniciar sesión con demo@tazi.es / 123456
       const { data, error } = await sb.auth.signInWithPassword({
         email: 'demo@tazi.es',
         password: '123456'
       });
       if (!error) {
         currentUser = data.user;
-        document.getElementById('auth-screen').style.display = 'none';
-        document.getElementById('map-screen').classList.add('active');
-        initMap();
-        startGPS();
+        entrarApp();
         return;
       }
-      // Si falla, intentar crear el usuario
       const { error: signUpError } = await sb.auth.signUp({
         email: 'demo@tazi.es',
         password: '123456'
       });
       if (!signUpError) {
-        // Esperar un momento y luego iniciar sesión
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(r => setTimeout(r, 600));
         const { data: loginData, error: loginError } = await sb.auth.signInWithPassword({
           email: 'demo@tazi.es',
           password: '123456'
         });
         if (!loginError) {
           currentUser = loginData.user;
-          document.getElementById('auth-screen').style.display = 'none';
-          document.getElementById('map-screen').classList.add('active');
-          initMap();
-          startGPS();
+          entrarApp();
           return;
         }
       }
@@ -395,8 +442,11 @@ async function entrarDemo() {
       console.warn('Supabase demo falló, usando modo local', e);
     }
   }
-  // Fallback: modo local sin Supabase
-  currentUser = { id: 'demo-user', email: 'demo@tazi.es' };
+  currentUser = { id: 'demo-local', email: 'demo@tazi.es' };
+  entrarApp();
+}
+
+function entrarApp() {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('map-screen').classList.add('active');
   initMap();
@@ -414,14 +464,12 @@ function initMap() {
     maxZoom: 19,
     subdomains: 'abcd'
   }).addTo(map);
+  map.on('click', () => document.getElementById('ac-list').style.display = 'none');
 }
 
 function centerMap() {
-  if (map && myPos) {
-    map.setView([myPos.lat, myPos.lng], 16, { animate: true });
-  } else if (map) {
-    map.setView([40.4168, -3.7038], 13);
-  }
+  if (map && myPos) map.setView([myPos.lat, myPos.lng], 16, { animate: true });
+  else if (map) map.setView([40.4168, -3.7038], 13);
 }
 
 function toggleFull() {
@@ -450,7 +498,7 @@ function startGPS() {
       status.textContent = `📍 Ubicación obtenida (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
       updateMyMarker();
       centerMap();
-      if (destPos) calcRoute();
+      if (destPos) fetchRoute();
     },
     err => {
       console.warn('GPS error:', err);
@@ -466,7 +514,7 @@ function setDefaultPosition() {
   document.getElementById('gps-status').textContent = '📍 Ubicación: Madrid (centro)';
   updateMyMarker();
   centerMap();
-  if (destPos) calcRoute();
+  if (destPos) fetchRoute();
 }
 
 function updateMyMarker() {
@@ -484,22 +532,54 @@ function updateMyMarker() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// BÚSQUEDA
+// BÚSQUEDA (Nominatim)
 // ═══════════════════════════════════════════════════════════════════
-function doSearch() {
-  const destInput = document.getElementById('dest-input').value.trim();
-  if (!destInput) return;
-  let lat = 40.4168, lng = -3.7038;
-  const text = destInput.toLowerCase();
-  if (text.includes('sol')) { lat = 40.4170; lng = -3.7030; }
-  else if (text.includes('atocha')) { lat = 40.4060; lng = -3.6897; }
-  else if (text.includes('chamartín')) { lat = 40.4729; lng = -3.6823; }
-  else if (text.includes('aeropuerto') || text.includes('barajas')) { lat = 40.4722; lng = -3.5604; }
-  else if (text.includes('retiro')) { lat = 40.4150; lng = -3.6830; }
-  destName = destInput;
-  destPos = { lat, lng };
+function onDestInput() {
+  clearTimeout(acTimeout);
+  const q = document.getElementById('dest-input').value.trim();
+  if (q.length < 3) { document.getElementById('ac-list').style.display = 'none'; return; }
+  acTimeout = setTimeout(() => fetchAutocomplete(q), 300);
+}
+
+async function fetchAutocomplete(q) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q + ' Madrid')}&format=json&limit=5&countrycodes=es`,
+      { headers: { 'Accept-Language': 'es', 'User-Agent': 'TaziApp/1.0' } }
+    );
+    const data = await res.json();
+    const box = document.getElementById('ac-list');
+    if (!data.length) { box.style.display = 'none'; return; }
+    box.innerHTML = data.map(r => `
+      <div class="ac-item" onclick="pickDest(${r.lat}, ${r.lon}, '${r.display_name.replace(/'/g, "\\'")}')">
+        <span>📍</span> ${r.display_name.split(',')[0]}
+      </div>
+    `).join('');
+    box.style.display = 'block';
+  } catch(e) { console.warn('Autocomplete error', e); }
+}
+
+function pickDest(lat, lon, name) {
+  document.getElementById('ac-list').style.display = 'none';
+  document.getElementById('dest-input').value = name.split(',')[0];
+  destName = name.split(',')[0];
+  destPos = { lat: parseFloat(lat), lng: parseFloat(lon) };
   updateDestMarker();
-  calcRoute();
+  fetchRoute();
+}
+
+async function doSearch() {
+  document.getElementById('ac-list').style.display = 'none';
+  const q = document.getElementById('dest-input').value.trim();
+  if (!q) return;
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q + ' Madrid')}&format=json&limit=1&countrycodes=es`,
+      { headers: { 'Accept-Language': 'es', 'User-Agent': 'TaziApp/1.0' } }
+    );
+    const data = await res.json();
+    if (data.length) pickDest(data[0].lat, data[0].lon, data[0].display_name);
+  } catch(e) { console.warn('Search error', e); }
 }
 
 function updateDestMarker() {
@@ -524,32 +604,79 @@ function clearDest() {
   document.getElementById('tarifa-section').style.display = 'none';
   document.getElementById('solicitar-section').style.display = 'none';
   document.getElementById('price-card').style.display = 'none';
+  document.getElementById('route-loading').style.display = 'none';
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// CÁLCULO DE RUTA Y PRECIO
+// RUTA REAL CON OSRM
 // ═══════════════════════════════════════════════════════════════════
-function calcRoute() {
+function fetchRoute() {
   if (!myPos || !destPos) return;
-  const R = 6371;
-  const dLat = (destPos.lat - myPos.lat) * Math.PI / 180;
-  const dLng = (destPos.lng - myPos.lng) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(myPos.lat*Math.PI/180)*Math.cos(destPos.lat*Math.PI/180)*Math.sin(dLng/2)**2;
-  const dist = R * 2 * Math.asin(Math.sqrt(a));
-  routeKm = dist * 1.3;
-  const tiempo = Math.round((routeKm / 30) * 60);
+  const loading = document.getElementById('route-loading');
+  const routeCard = document.getElementById('route-card');
+  const tarifaSection = document.getElementById('tarifa-section');
+  const priceCard = document.getElementById('price-card');
 
-  if (routeLayer) { map.removeLayer(routeLayer); }
-  routeLayer = L.polyline([[myPos.lat, myPos.lng], [destPos.lat, destPos.lng]], {
-    color: '#1a73e8', weight: 4, opacity: 0.8
-  }).addTo(map);
+  loading.style.display = 'block';
+  routeCard.style.display = 'none';
+  tarifaSection.style.display = 'none';
+  priceCard.style.display = 'none';
+  document.getElementById('solicitar-section').style.display = 'none';
 
-  document.getElementById('route-card').style.display = 'block';
-  document.getElementById('route-km').textContent = routeKm.toFixed(1) + ' km por carretera';
-  document.getElementById('route-time').textContent = '~' + tiempo + ' min';
-  document.getElementById('tarifa-section').style.display = 'block';
-  document.getElementById('solicitar-section').style.display = 'block';
-  calcPrice();
+  const url = `https://router.project-osrm.org/route/v1/driving/${myPos.lng},${myPos.lat};${destPos.lng},${destPos.lat}?overview=full&geometries=geojson`;
+
+  fetch(url)
+    .then(res => res.json())
+    .then(data => {
+      loading.style.display = 'none';
+      if (data.code !== 'Ok' || !data.routes || !data.routes.length) {
+        throw new Error('No se pudo calcular la ruta');
+      }
+      const route = data.routes[0];
+      routeKm = route.distance / 1000;
+      const duration = Math.round(route.duration / 60);
+
+      if (routeLayer) map.removeLayer(routeLayer);
+      const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+      routeLayer = L.polyline(coords, { color: '#1a73e8', weight: 5, opacity: 0.8 }).addTo(map);
+
+      const bounds = routeLayer.getBounds();
+      map.fitBounds(bounds, { padding: [40, 40] });
+
+      document.getElementById('route-card').style.display = 'block';
+      document.getElementById('route-km').textContent = routeKm.toFixed(1) + ' km por carretera';
+      document.getElementById('route-time').textContent = '~' + duration + ' min';
+      document.getElementById('tarifa-section').style.display = 'block';
+      document.getElementById('solicitar-section').style.display = 'block';
+      calcPrice();
+    })
+    .catch(err => {
+      console.warn('OSRM error:', err);
+      loading.style.display = 'none';
+      // Fallback: distancia en línea recta * 1.3
+      const R = 6371;
+      const dLat = (destPos.lat - myPos.lat) * Math.PI / 180;
+      const dLng = (destPos.lng - myPos.lng) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(myPos.lat*Math.PI/180)*Math.cos(destPos.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+      const dist = R * 2 * Math.asin(Math.sqrt(a));
+      routeKm = dist * 1.3;
+      document.getElementById('route-card').style.display = 'block';
+      document.getElementById('route-km').textContent = routeKm.toFixed(1) + ' km (estimado)';
+      document.getElementById('route-time').textContent = '—';
+      document.getElementById('tarifa-section').style.display = 'block';
+      document.getElementById('solicitar-section').style.display = 'block';
+      calcPrice();
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TARIFAS Y PRECIO
+// ═══════════════════════════════════════════════════════════════════
+function esHorarioDiurno() {
+  const ahora = new Date();
+  const dia = ahora.getDay();
+  const hora = ahora.getHours() + ahora.getMinutes()/60;
+  return dia !== 0 && dia !== 6 && (hora >= 7 && hora < 21);
 }
 
 function setTarifa(key, el) {
@@ -560,22 +687,43 @@ function setTarifa(key, el) {
 }
 
 function calcPrice() {
+  if (!routeKm) return;
   const t = TARIFAS[tarifaKey];
   let precio = 0;
+
   if (t.tipo === 'fijo') {
     precio = t.precio_fijo;
-  } else if (t.tipo === 'minimo') {
-    precio = routeKm <= t.franquicia ? t.minimo : t.minimo + (routeKm - t.franquicia) * 1.40;
-  } else if (t.tipo === 'salida') {
-    const kmExtra = Math.max(0, routeKm - (t.franquicia_m));
-    precio = t.salida + kmExtra * 1.40;
+  } else if (t.tipo === 'minimo_luego_metro') {
+    const esDiurno = esHorarioDiurno();
+    const kmTarifa = esDiurno ? t.km_t1 : t.km_t2;
+    if (routeKm <= t.franquicia_km) {
+      precio = t.minimo;
+    } else {
+      precio = t.minimo + (routeKm - t.franquicia_km) * kmTarifa;
+    }
+  } else if (t.tipo === 'salida_especial') {
+    const esDiurno = esHorarioDiurno();
+    const kmTarifa = esDiurno ? t.km : t.km_noche;
+    const franquiciaKm = t.franquicia_m / 1000;
+    const kmExtra = Math.max(0, routeKm - franquiciaKm);
+    precio = t.salida + kmExtra * kmTarifa;
   } else {
     precio = t.bandera + routeKm * t.km;
     precio = Math.max(precio, t.min);
   }
+
   document.getElementById('price-card').style.display = 'block';
   document.getElementById('precio-main').textContent = precio.toFixed(2) + ' €';
   document.getElementById('tarifa-tag').textContent = t.id;
+}
+
+function obtenerPrecioActual() {
+  const pm = document.getElementById('precio-main');
+  if (pm) {
+    const txt = pm.textContent.replace(' €', '').replace(',', '.');
+    return parseFloat(txt) || 0;
+  }
+  return 0;
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -620,7 +768,7 @@ async function solicitarTaxi() {
   estado.style.color = '#fbbc04';
   cancelBtn.style.display = 'none';
 
-  const precio = parseFloat(document.getElementById('precio-main').textContent.replace(' €', '').replace(',', '.'));
+  const precio = obtenerPrecioActual();
 
   const solicitud = {
     usuario_id: currentUser.id,
@@ -656,7 +804,7 @@ async function solicitarTaxi() {
     btn.textContent = '⏳ Esperando...';
     cancelBtn.style.display = 'inline-block';
 
-    // Iniciar temporizador de 10s
+    // Temporizador de 10s para cancelar sin penalización
     let segundos = 10;
     solicitudTimer = setInterval(() => {
       segundos--;
@@ -669,11 +817,11 @@ async function solicitarTaxi() {
       }
     }, 1000);
 
-    // Suscribirse a cambios (solo si Supabase está disponible)
+    // Suscribirse a cambios en la solicitud
     if (supabaseReady && sb) {
       suscribirSolicitud(solicitudId);
     } else {
-      // Simular aceptación después de 10s
+      // Modo local: simular aceptación después de 10 segundos
       setTimeout(() => {
         if (solicitudId) {
           estado.textContent = '✅ Taxi aceptado! Tienes 2 minutos para cancelar sin cargo.';
@@ -681,7 +829,7 @@ async function solicitarTaxi() {
           solicitudAceptada = true;
           solicitudAceptadaTimestamp = Date.now();
           btn.textContent = '✅ Taxi en camino';
-          // Iniciar temporizador de 2 minutos
+          // Temporizador de 2 minutos para cancelar sin cargo
           let segundos2 = 120;
           solicitudTimer = setInterval(() => {
             segundos2--;
@@ -743,7 +891,6 @@ function suscribirSolicitud(id) {
             estado.style.color = '#fbbc04';
           }
         }, 1000);
-        // Cargar conductor
         cargarConductor(nueva.conductor_id);
       } else if (nueva.estado === 'cancelado') {
         resetSolicitud();
@@ -773,7 +920,6 @@ function cancelarSolicitud() {
   if (solicitudAceptada && solicitudAceptadaTimestamp) {
     const tiempoTranscurrido = ahora - solicitudAceptadaTimestamp;
     if (tiempoTranscurrido > 120000) {
-      // Mostrar modal de cargo
       document.getElementById('cancel-modal-msg').innerHTML =
         '⚠️ Han pasado más de 2 minutos desde que el conductor aceptó.<br/><strong>Si cancelas ahora, se te aplicará un cargo de 5,00 €.</strong><br/>¿Deseas continuar?';
       document.getElementById('cancel-modal').classList.add('show');
@@ -824,4 +970,4 @@ function doLogout() {
 }
 </script>
 </body>
-</html>
+  </html>
