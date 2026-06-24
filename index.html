@@ -540,56 +540,130 @@ function startGPS() {
     return;
   }
   status.textContent = '⏳ Obteniendo ubicación...';
-  watchId = navigator.geolocation.watchPosition(
+
+  // Primera lectura rápida con getCurrentPosition para evitar espera inicial
+  navigator.geolocation.getCurrentPosition(
     pos => {
-      const { latitude, longitude } = pos.coords;
-      const nueva = { lat: latitude, lng: longitude };
-
-      // Solo actuar si la posición cambió más de 15 metros (evita parpadeo continuo)
-      if (myPos) {
-        const d = distanciaKm(myPos, nueva) * 1000;
-        if (d < 15) return;
-      }
-
-      myPos = nueva;
-      status.textContent = `📍 GPS activo (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
-
-      if (myMarker) {
-        myMarker.setLatLng([latitude, longitude]);
-      } else {
-        const icon = L.divIcon({
-          html: '<div style="background:#4285f4;width:16px;height:16px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 4px rgba(66,133,244,0.3);"></div>',
-          iconSize: [16,16], iconAnchor: [8,8]
-        });
-        myMarker = L.marker([latitude, longitude], { icon }).addTo(map);
-        centerMap(); // centrar solo la primera vez
-      }
-
-      // Recalcular ruta solo si hay destino Y el mapa no está siendo usado
-      if (destPos) fetchRoute();
+      aplicarPosicion(pos);
+      // Luego watchPosition solo para actualizaciones significativas
+      watchId = navigator.geolocation.watchPosition(
+        pos => {
+          const { latitude, longitude } = pos.coords;
+          const nueva = { lat: latitude, lng: longitude };
+          if (myPos && distanciaKm(myPos, nueva) * 1000 < 30) return; // ignorar < 30m
+          aplicarPosicion(pos);
+        },
+        err => console.warn('GPS watch error:', err),
+        { enableHighAccuracy: true, maximumAge: 30000, timeout: 15000 }
+      );
     },
     err => {
       console.warn('GPS error:', err);
       status.textContent = '⚠️ No se pudo obtener GPS. Usando Madrid centro.';
       setDefaultPosition();
     },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 }
+    { enableHighAccuracy: true, timeout: 10000 }
   );
+}
+
+function aplicarPosicion(pos) {
+  const { latitude, longitude } = pos.coords;
+  myPos = { lat: latitude, lng: longitude };
+  document.getElementById('gps-status').textContent = `📍 GPS activo`;
+
+  if (myMarker) {
+    myMarker.setLatLng([latitude, longitude]);
+  } else {
+    const icon = L.divIcon({
+      html: '<div style="background:#4285f4;width:16px;height:16px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 4px rgba(66,133,244,0.3);"></div>',
+      iconSize: [16,16], iconAnchor: [8,8]
+    });
+    myMarker = L.marker([latitude, longitude], { icon }).addTo(map);
+    centerMap(); // centrar solo la primera vez que aparece el marcador
+  }
+
+  if (destPos) fetchRoute();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RUTA REAL CON OSRM
+// ═══════════════════════════════════════════════════════════════════
+let fetchRouteController = null; // para cancelar fetch anterior
+
+function fetchRoute() {
+  if (!myPos || !destPos) return;
+
+  // Cancelar petición anterior si sigue en vuelo
+  if (fetchRouteController) fetchRouteController.abort();
+  fetchRouteController = new AbortController();
+  const signal = fetchRouteController.signal;
+
+  const loading    = document.getElementById('route-loading');
+  const routeCard  = document.getElementById('route-card');
+  const tarifaSection = document.getElementById('tarifa-section');
+
+  loading.style.display = 'block';
+  // NO ocultamos routeCard ni tarifaSection si ya están visibles → evita parpadeo
+
+  const url = `https://router.project-osrm.org/route/v1/driving/${myPos.lng},${myPos.lat};${destPos.lng},${destPos.lat}?overview=full&geometries=geojson`;
+
+  fetch(url, { signal })
+    .then(res => res.json())
+    .then(data => {
+      loading.style.display = 'none';
+      if (data.code !== 'Ok' || !data.routes?.length) throw new Error('Sin ruta');
+
+      const route = data.routes[0];
+      routeKm = route.distance / 1000;
+      routeMinutos = route.duration / 60;
+
+      // Actualizar polilínea sin remover/añadir (evita parpadeo de mapa)
+      if (routeLayer) map.removeLayer(routeLayer);
+      const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+      routeLayer = L.polyline(coords, { color: '#1a73e8', weight: 5, opacity: 0.8 }).addTo(map);
+      map.fitBounds(routeLayer.getBounds(), { padding: [40, 40] });
+
+      document.getElementById('route-km').textContent = routeKm.toFixed(1) + ' km por carretera';
+      document.getElementById('route-time').textContent = '~' + Math.round(routeMinutos) + ' min';
+      routeCard.style.display = 'block';
+      tarifaSection.style.display = 'block';
+      document.getElementById('solicitar-section').style.display = 'block';
+
+      aplicarTarifaAutomatica();
+      calcPrice();
+    })
+    .catch(err => {
+      if (err.name === 'AbortError') return; // petición cancelada, ignorar
+      console.warn('OSRM error:', err);
+      loading.style.display = 'none';
+
+      // Fallback distancia recta × 1.3
+      const dLat = (destPos.lat - myPos.lat) * Math.PI / 180;
+      const dLng = (destPos.lng - myPos.lng) * Math.PI / 180;
+      const a1 = Math.sin(dLat/2)**2 + Math.cos(myPos.lat*Math.PI/180)*Math.cos(destPos.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+      routeKm = 6371 * 2 * Math.asin(Math.sqrt(a1)) * 1.3;
+      routeMinutos = (routeKm / 30) * 60;
+
+      document.getElementById('route-km').textContent = routeKm.toFixed(1) + ' km (estimado)';
+      document.getElementById('route-time').textContent = '—';
+      routeCard.style.display = 'block';
+      tarifaSection.style.display = 'block';
+      document.getElementById('solicitar-section').style.display = 'block';
+
+      aplicarTarifaAutomatica();
+      calcPrice();
+    });
 }
 
 function setDefaultPosition() {
   myPos = { lat: 40.4168, lng: -3.7038 };
   document.getElementById('gps-status').textContent = '📍 Ubicación: Madrid (centro)';
-  if (myMarker) {
-    myMarker.setLatLng([myPos.lat, myPos.lng]);
-  } else {
-    const icon = L.divIcon({
-      html: '<div style="background:#4285f4;width:16px;height:16px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 4px rgba(66,133,244,0.3);"></div>',
-      iconSize: [16,16],
-      iconAnchor: [8,8]
-    });
-    myMarker = L.marker([myPos.lat, myPos.lng], { icon }).addTo(map);
-  }
+  const icon = L.divIcon({
+    html: '<div style="background:#4285f4;width:16px;height:16px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 4px rgba(66,133,244,0.3);"></div>',
+    iconSize: [16,16], iconAnchor: [8,8]
+  });
+  if (!myMarker) myMarker = L.marker([myPos.lat, myPos.lng], { icon }).addTo(map);
+  else myMarker.setLatLng([myPos.lat, myPos.lng]);
   centerMap();
   if (destPos) fetchRoute();
 }
@@ -751,40 +825,33 @@ function esHorarioDiurno() {
 function aplicarTarifaAutomatica() {
   if (!myPos || !destPos) return;
 
-  const origen = myPos;
-  const destino = destPos;
-  const nombreOrigen = origName || '';
-  const nombreDestino = destName || '';
+  // Detección siempre por coordenadas (origName puede ser 'Mi ubicación')
+  // También revisamos el nombre del destino que sí viene de Nominatim
+  const origenEsAeropuerto  = esAeropuerto(myPos, '');
+  const destinoEsAeropuerto = esAeropuerto(destPos, destName);
 
-  // ── Aeropuerto ─────────────────────────────────────────────────
-  const origenAeropuerto  = esAeropuerto(origen,  nombreOrigen);
-  const destinoAeropuerto = esAeropuerto(destino, nombreDestino);
-
-  if (origenAeropuerto || destinoAeropuerto) {
-    const otroPunto = origenAeropuerto ? destino : origen;
+  if (origenEsAeropuerto || destinoEsAeropuerto) {
+    const otroPunto = origenEsAeropuerto ? destPos : myPos;
 
     // T4: origen O destino = aeropuerto + el otro punto dentro M-30
     if (dentroDeLaM30(otroPunto)) {
       activarChip('t4');
       return;
     }
-
-    // T3: solo cuando ORIGEN = aeropuerto + destino fuera M-30
-    if (origenAeropuerto) {
+    // T3: solo ORIGEN = aeropuerto + destino fuera M-30
+    if (origenEsAeropuerto) {
       activarChip('t3');
       return;
     }
-
-    // Destino = aeropuerto + origen fuera M-30 → tarifa ciudad normal
+    // destino = aeropuerto + origen fuera M-30 → tarifa ciudad normal
   }
 
-  // ── Estación (origen O destino) ────────────────────────────────
-  if (esEstacion(origen, nombreOrigen) || esEstacion(destino, nombreDestino)) {
+  // Estación: por coordenadas y nombre de destino
+  if (esEstacion(myPos, '') || esEstacion(destPos, destName)) {
     activarChip('t7');
     return;
   }
 
-  // ── Ciudad: día o noche ────────────────────────────────────────
   activarChip(esHorarioDiurno() ? 't1' : 't2');
 }
 
