@@ -257,7 +257,6 @@
       inset: 0;
       flex-direction: column;
       background: var(--bg);
-      /* Padding para safe areas */
       padding-top: var(--sat);
     }
     #screen-map.active { display: flex; }
@@ -304,7 +303,7 @@
       border: none;
       outline: none;
       font-family: inherit;
-      font-size: 16px; /* evita zoom iOS */
+      font-size: 16px;
       color: var(--text);
       background: transparent;
     }
@@ -423,7 +422,6 @@
       position: relative;
       -webkit-overflow-scrolling: touch;
       overscroll-behavior: contain;
-      /* Padding inferior para home indicator de iPhone */
       padding-bottom: var(--sab);
     }
 
@@ -542,6 +540,41 @@
     .leaflet-popup-tip { display: none; }
     .leaflet-popup-content { margin: .65rem .9rem !important; font-size: .85rem !important; }
 
+    /* ═══ BOTÓN SOLICITAR TAXI ═══ */
+    #solicitar-section {
+      display: none;
+      padding: 0.75rem 1rem;
+      border-top: 1px solid #f0f0f0;
+      background: white;
+    }
+    .btn-solicitar {
+      display: block;
+      width: 100%;
+      padding: 1rem;
+      background: linear-gradient(135deg, #fbbc04, #f9ab00);
+      color: #202124;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(251, 188, 4, 0.4);
+      transition: transform 0.15s, box-shadow 0.15s;
+      -webkit-appearance: none;
+    }
+    .btn-solicitar:hover { transform: scale(1.02); box-shadow: 0 6px 24px rgba(251, 188, 4, 0.6); }
+    .btn-solicitar:active { transform: scale(0.98); }
+    .btn-solicitar:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    #solicitar-feedback {
+      display: none;
+      text-align: center;
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
     /* ═══ BANNER INSTALACIÓN PWA ═══ */
     #install-banner {
       display: none;
@@ -651,7 +684,6 @@
       #install-banner { bottom: calc(80px + var(--sab)); }
     }
 
-    /* Evita el scroll rebote en iOS cuando el panel está al final */
     #bottom-panel::-webkit-scrollbar { display: none; }
   </style>
 </head>
@@ -789,6 +821,12 @@
       </div>
       <div id="price-card"></div>
     </div>
+
+    <!-- ═══ BOTÓN SOLICITAR TAXI ═══ -->
+    <div id="solicitar-section">
+      <button id="btn-solicitar" class="btn-solicitar" onclick="solicitarTaxi()">🚖 Solicitar taxi</button>
+      <div id="solicitar-feedback"></div>
+    </div>
   </div>
 </div>
 
@@ -877,13 +915,18 @@ function detectarOrigen() {
 // ═══════════════════════════════════════════
 let map, myMarker, accCircle, destMarker, origMarker, routeLayer;
 let myPos = null, origPos = null, origName = '';
-let destPos = null, routeKm = null, routeDurMin = null;
+let destPos = null, destName = '';
+let routeKm = null, routeDurMin = null;
 let watchId = null, currentUser = null, lastSaved = 0;
 let tarifaKey = 't1', fullscreen = false;
 let fetchingRoute = false, routeFetchTimeout = null, lastRouteKm = null, isFlying = false;
 let lastMyPos = null, acFocus = 'dest';
 const GPS_THRESHOLD_M = 15;
 const SAVE_MS = 10000;
+
+// Estado de la solicitud
+let solicitudChannel = null;
+let solicitudId = null;
 
 // ═══════════════════════════════════════════
 // PWA INSTALACIÓN
@@ -1105,6 +1148,7 @@ function onPos(pos) {
       if(!origPos && inp.value === '') inp.value = addr;
       origName = addr;
       actualizarChipsOrigen();
+      actualizarBotonSolicitar();
     });
   } else {
     myMarker.setLatLng(ll);
@@ -1117,6 +1161,7 @@ function onPos(pos) {
     lastMyPos = newPos;
     if(!origPos && destPos) scheduleFetchRoute();
     actualizarChipsOrigen();
+    actualizarBotonSolicitar();
   }
   const now = Date.now();
   if(now - lastSaved >= SAVE_MS && currentUser && currentUser.id !== 'demo-user'){
@@ -1182,6 +1227,7 @@ function pickOrigAC(lat, lon, name) {
   else { myMarker = L.marker(ll,{icon,zIndexOffset:1000}).addTo(map).bindPopup(`<b>${label}</b>`,{closeButton:false}); }
   lastRouteKm = null;
   actualizarChipsOrigen();
+  actualizarBotonSolicitar();
   if(destPos) scheduleFetchRoute();
 }
 
@@ -1193,6 +1239,7 @@ function clearOrig() {
   if(myPos && myMarker){ myMarker.setLatLng([myPos.lat,myPos.lng]); if(accCircle) accCircle.setLatLng([myPos.lat,myPos.lng]); }
   lastRouteKm = null;
   actualizarChipsOrigen();
+  actualizarBotonSolicitar();
   if(destPos) scheduleFetchRoute();
 }
 
@@ -1235,17 +1282,19 @@ async function doSearch() {
 }
 
 function pickAC(lat, lon, name) {
-  document.getElementById('dest-input').value=name.split(',')[0];
+  const label = name.split(',')[0];
+  document.getElementById('dest-input').value=label;
   document.getElementById('ac-list').style.display='none';
   document.getElementById('btn-clear').style.display='block';
-  setDest(parseFloat(lat), parseFloat(lon), name.split(',')[0]);
+  destName = label;
+  setDest(parseFloat(lat), parseFloat(lon), label);
 }
 
 function clearDest() {
   document.getElementById('dest-input').value='';
   document.getElementById('btn-clear').style.display='none';
   document.getElementById('ac-list').style.display='none';
-  destPos=null; routeKm=null; routeDurMin=null; lastRouteKm=null;
+  destPos=null; destName=''; routeKm=null; routeDurMin=null; lastRouteKm=null;
   if(routeLayer){ map.removeLayer(routeLayer); routeLayer=null; }
   if(destMarker){ map.removeLayer(destMarker); destMarker=null; }
   document.getElementById('no-dest').style.display='';
@@ -1255,6 +1304,7 @@ function clearDest() {
   document.getElementById('price-card').style.display='none';
   if(routeFetchTimeout){ clearTimeout(routeFetchTimeout); routeFetchTimeout=null; }
   fetchingRoute=false; isFlying=false;
+  actualizarBotonSolicitar();
 }
 
 // ═══════════════════════════════════════════
@@ -1262,6 +1312,7 @@ function clearDest() {
 // ═══════════════════════════════════════════
 function setDest(lat, lng, name) {
   destPos = { lat, lng };
+  destName = name;
   const pin=`<svg width="26" height="36" viewBox="0 0 26 36" fill="none"><path d="M13 0C5.82 0 0 5.82 0 13c0 9.1 13 23 13 23S26 22.1 26 13C26 5.82 20.18 0 13 0z" fill="#ea4335"/><circle cx="13" cy="13" r="5.5" fill="white"/></svg>`;
   const icon=L.divIcon({ className:'', html:pin, iconSize:[26,36], iconAnchor:[13,36] });
   if(destMarker){ destMarker.setLatLng([lat,lng]); }
@@ -1269,6 +1320,7 @@ function setDest(lat, lng, name) {
   destMarker.bindPopup(`<b>${name}</b>`).openPopup();
   if(!myPos) map.setView([lat,lng], 14);
   actualizarChipsOrigen();
+  actualizarBotonSolicitar();
   scheduleFetchRoute();
 }
 
@@ -1307,6 +1359,7 @@ async function fetchRoute() {
       document.getElementById('route-time').textContent = '~'+routeDurMin+' min';
       calcPrice();
       fetchingRoute = false;
+      actualizarBotonSolicitar();
       return;
     }
 
@@ -1334,6 +1387,7 @@ async function fetchRoute() {
     document.getElementById('route-km').textContent = routeKm.toFixed(1)+' km por carretera';
     document.getElementById('route-time').textContent = '~'+routeDurMin+' min';
     calcPrice();
+    actualizarBotonSolicitar();
   } catch(e){
     console.warn('OSRM:', e);
     document.getElementById('route-loading').style.display='none';
@@ -1488,6 +1542,189 @@ function calcPrice() {
 }
 
 // ═══════════════════════════════════════════
+// SOLICITAR TAXI (con Supabase)
+// ═══════════════════════════════════════════
+function obtenerPrecioActual() {
+  const pmMain = document.querySelector('.pm-main');
+  if (pmMain) {
+    const texto = pmMain.textContent.replace(' €', '').replace(',', '.');
+    return parseFloat(texto) || 0;
+  }
+  return 0;
+}
+
+function actualizarBotonSolicitar() {
+  const section = document.getElementById('solicitar-section');
+  const origen = origPos || myPos;
+  const destino = destPos;
+  const btn = document.getElementById('btn-solicitar');
+  const feedback = document.getElementById('solicitar-feedback');
+
+  // Si ya hay una solicitud en curso, no ocultar
+  if (solicitudId) {
+    section.style.display = 'block';
+    btn.disabled = true;
+    btn.textContent = '⏳ Taxi solicitado...';
+    feedback.style.display = 'block';
+    feedback.textContent = 'Esperando conductor...';
+    feedback.style.color = 'var(--muted)';
+    return;
+  }
+
+  if (origen && destino && routeKm !== null && currentUser) {
+    section.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = '🚖 Solicitar taxi';
+    feedback.style.display = 'none';
+  } else {
+    section.style.display = 'none';
+  }
+}
+
+let solicitudEnProgreso = false;
+
+async function solicitarTaxi() {
+  const origen = origPos || myPos;
+  const destino = destPos;
+  if (!origen || !destino) {
+    toast('Primero define origen y destino.', 'error');
+    return;
+  }
+
+  if (solicitudEnProgreso) return;
+  if (!supabaseReady) {
+    toast('Supabase no disponible', 'error');
+    return;
+  }
+  if (!currentUser || currentUser.id === 'demo-user') {
+    toast('Inicia sesión para solicitar un taxi', 'error');
+    return;
+  }
+
+  solicitudEnProgreso = true;
+  const btn = document.getElementById('btn-solicitar');
+  const feedback = document.getElementById('solicitar-feedback');
+  btn.disabled = true;
+  btn.textContent = '⏳ Enviando...';
+  feedback.style.display = 'block';
+  feedback.textContent = 'Creando solicitud...';
+  feedback.style.color = 'var(--muted)';
+
+  const precio = obtenerPrecioActual();
+
+  const solicitud = {
+    usuario_id: currentUser.id,
+    origen_lat: origen.lat,
+    origen_lng: origen.lng,
+    origen_nombre: origName || 'Mi ubicación',
+    destino_lat: destino.lat,
+    destino_lng: destino.lng,
+    destino_nombre: destName || 'Destino',
+    precio: precio,
+    tarifa_key: tarifaKey,
+    distancia_km: routeKm || 0,
+    estado: 'pendiente'
+  };
+
+  try {
+    const { data, error } = await sb
+      .from('solicitudes')
+      .insert(solicitud)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    solicitudId = data.id;
+    feedback.style.color = '#34a853';
+    feedback.textContent = '✅ Solicitud enviada. Buscando conductor...';
+    btn.textContent = '⏳ Esperando conductor...';
+    toast('Solicitud enviada. Espera a que un conductor la acepte.', 'success');
+
+    // Suscribirse a cambios
+    suscribirSolicitud(solicitudId);
+
+  } catch (err) {
+    console.error('Error al solicitar taxi:', err);
+    feedback.style.color = '#f87171';
+    feedback.textContent = '❌ ' + err.message;
+    btn.textContent = '🔄 Reintentar';
+    btn.disabled = false;
+    toast('Error al solicitar taxi.', 'error');
+  } finally {
+    solicitudEnProgreso = false;
+  }
+}
+
+function suscribirSolicitud(id) {
+  if (solicitudChannel) {
+    sb.removeChannel(solicitudChannel);
+  }
+
+  solicitudChannel = sb.channel(`solicitud-${id}`);
+  solicitudChannel.on(
+    'postgres_changes',
+    {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'solicitudes',
+      filter: `id=eq.${id}`
+    },
+    (payload) => {
+      const nueva = payload.new;
+      const btn = document.getElementById('btn-solicitar');
+      const feedback = document.getElementById('solicitar-feedback');
+
+      if (nueva.estado === 'aceptado') {
+        toast('✅ Tu taxi ha sido aceptado', 'success');
+        feedback.style.color = '#34a853';
+        feedback.innerHTML = '✅ <strong>Taxi aceptado</strong>. El conductor está en camino.';
+        btn.textContent = '✅ Taxi asignado';
+        btn.disabled = true;
+        // Opcional: mostrar info del conductor
+        if (nueva.conductor_id) {
+          cargarConductor(nueva.conductor_id);
+        }
+      } else if (nueva.estado === 'cancelado') {
+        toast('❌ La solicitud fue cancelada', 'error');
+        feedback.style.color = '#f87171';
+        feedback.textContent = '❌ Solicitud cancelada. Puedes intentar de nuevo.';
+        btn.textContent = '🚖 Solicitar taxi';
+        btn.disabled = false;
+        solicitudId = null;
+        if (solicitudChannel) {
+          sb.removeChannel(solicitudChannel);
+          solicitudChannel = null;
+        }
+        actualizarBotonSolicitar();
+      } else if (nueva.estado === 'completado') {
+        toast('✅ Viaje completado', 'success');
+        feedback.style.color = '#34a853';
+        feedback.textContent = '✅ Viaje completado. ¡Gracias por usar Tazi!';
+        btn.textContent = '✅ Completado';
+        btn.disabled = true;
+      }
+    }
+  ).subscribe();
+}
+
+async function cargarConductor(conductorId) {
+  try {
+    const { data, error } = await sb
+      .from('perfiles')
+      .select('nombre, telefono, vehiculo')
+      .eq('id', conductorId)
+      .single();
+    if (!error && data) {
+      const feedback = document.getElementById('solicitar-feedback');
+      feedback.innerHTML += `<br>🚗 Conductor: ${data.nombre || 'Anónimo'} · ${data.vehiculo || ''}`;
+    }
+  } catch (e) {
+    console.warn('Error cargando conductor:', e);
+  }
+}
+
+// ═══════════════════════════════════════════
 // GUARDAR UBICACIÓN
 // ═══════════════════════════════════════════
 async function saveLocation(lat, lng, acc) {
@@ -1508,11 +1745,11 @@ document.addEventListener('click', e=>{
 // ═══════════════════════════════════════════
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
-      .then(() => console.log('SW registrado'))
+    navigator.serviceWorker.register('/Tazi/sw.js')
+      .then(() => console.log('SW registrado correctamente'))
       .catch(err => console.warn('SW error:', err));
   });
 }
 </script>
 </body>
-</html>
+  </html>
