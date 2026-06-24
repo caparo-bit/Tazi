@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin · Tazi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0f1117;
+      color: #e8e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      background: #1a1a2e;
+      border-radius: 20px;
+      border: 1px solid #2a2a45;
+      padding: 2rem 1.5rem;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    }
+    h1 { font-size: 1.8rem; color: #3ecf8e; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+    .sub { color: #6b7280; font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .admin-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+    .admin-header .user-info { font-size: 0.9rem; color: #6b7280; }
+    .btn {
+      background: transparent;
+      border: 1px solid #2a2a45;
+      color: #e8e8f0;
+      padding: 0.5rem 1.2rem;
+      border-radius: 30px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+    .btn:hover { background: #2a2a45; }
+    .btn-danger { border-color: #ea4335; color: #ea4335; }
+    .btn-danger:hover { background: #ea4335; color: #fff; }
+    .btn-success { border-color: #34a853; color: #34a853; }
+    .btn-success:hover { background: #34a853; color: #fff; }
+    .btn-primary { border-color: #1a73e8; color: #1a73e8; }
+    .btn-primary:hover { background: #1a73e8; color: #fff; }
+
+    .login-box {
+      max-width: 360px;
+      margin: 0 auto;
+      padding: 2rem 0;
+    }
+    .login-box input {
+      width: 100%;
+      padding: 0.7rem 1rem;
+      border-radius: 8px;
+      border: 1px solid #2a2a45;
+      background: rgba(255,255,255,0.05);
+      color: #e8e8f0;
+      font-size: 0.95rem;
+      margin-bottom: 0.8rem;
+      font-family: 'Inter', sans-serif;
+    }
+    .login-box input::placeholder { color: #4a4a6a; }
+    .login-box .btn-main {
+      width: 100%;
+      padding: 0.8rem;
+      border: none;
+      border-radius: 8px;
+      background: #3ecf8e;
+      color: #0f1117;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+    }
+    .login-box .btn-main:hover { opacity: 0.88; }
+    .login-box .error { color: #f87171; margin-top: 0.5rem; }
+
+    .table-wrap { overflow-x: auto; margin-top: 1.5rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    th {
+      text-align: left;
+      padding: 0.7rem 0.5rem;
+      color: #6b7280;
+      font-weight: 600;
+      border-bottom: 1px solid #2a2a45;
+    }
+    td {
+      padding: 0.6rem 0.5rem;
+      border-bottom: 1px solid #1e1e32;
+      vertical-align: middle;
+    }
+    td .actions {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    .badge-role {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      background: #2a2a45;
+      color: #b0b0c8;
+    }
+    .badge-role.admin { background: #1a73e8; color: white; }
+    .badge-role.conductor { background: #34a853; color: white; }
+    .badge-role.conductor_pendiente { background: #fbbc04; color: #0f1117; }
+
+    .add-form {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #2a2a45;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0.8rem 1rem;
+      align-items: end;
+    }
+    .add-form .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    .add-form .field label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: #6b7280;
+      letter-spacing: 0.05em;
+    }
+    .add-form .field input,
+    .add-form .field select {
+      padding: 0.5rem 0.7rem;
+      border-radius: 8px;
+      border: 1px solid #2a2a45;
+      background: rgba(255,255,255,0.05);
+      color: #e8e8f0;
+      font-size: 0.9rem;
+      font-family: 'Inter', sans-serif;
+      width: 100%;
+    }
+    .add-form .field input::placeholder { color: #4a4a6a; }
+    .add-form .btn-add {
+      background: #3ecf8e;
+      color: #0f1117;
+      border: none;
+      border-radius: 8px;
+      padding: 0.5rem 1.2rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      height: 38px;
+      align-self: end;
+    }
+    .add-form .btn-add:hover { opacity: 0.88; }
+
+    @media (max-width: 640px) {
+      .container { padding: 1rem; }
+      .add-form { grid-template-columns: 1fr; }
+      table { font-size: 0.75rem; }
+      th, td { padding: 0.4rem 0.3rem; }
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1a1a2e;
+      border: 1px solid #2a2a45;
+      padding: 10px 24px;
+      border-radius: 40px;
+      color: #34d399;
+      font-weight: 500;
+      z-index: 9999;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<div class="container" id="app">
+  <!-- Login -->
+  <div id="login-section">
+    <div class="login-box">
+      <h1>🔐 Panel Admin</h1>
+      <p class="sub">Acceso exclusivo para administradores</p>
+      <input id="admin-email" type="email" placeholder="Correo electrónico" />
+      <input id="admin-password" type="password" placeholder="Contraseña" />
+      <button class="btn-main" onclick="adminLogin()">Iniciar sesión</button>
+      <div id="login-error" class="error"></div>
+    </div>
+  </div>
+
+  <!-- Panel Admin -->
+  <div id="admin-panel" class="hidden">
+    <div class="admin-header">
+      <div>
+        <h1>🧑‍💼 Gestión de conductores</h1>
+        <p class="sub">Administra todos los perfiles de conductores registrados</p>
+      </div>
+      <div class="user-info">
+        <span id="admin-name"></span> · 
+        <button class="btn btn-danger" onclick="adminLogout()">Cerrar sesión</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Teléfono</th>
+            <th>Vehículo</th>
+            <th>Matrícula</th>
+            <th>Licencia</th>
+            <th>Rol</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="usuarios-tbody">
+          <tr><td colspan="8" style="text-align:center; padding:2rem; color:#6b7280;">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Formulario añadir -->
+    <div class="add-form">
+      <div class="field">
+        <label>Nombre</label>
+        <input id="new-nombre" placeholder="Nombre completo" />
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input id="new-email" type="email" placeholder="correo@ejemplo.com" />
+      </div>
+      <div class="field">
+        <label>Teléfono</label>
+        <input id="new-telefono" placeholder="+34 600 000 000" />
+      </div>
+      <div class="field">
+        <label>Vehículo</label>
+        <input id="new-vehiculo" placeholder="Ej. Toyota Prius" />
+      </div>
+      <div class="field">
+        <label>Matrícula</label>
+        <input id="new-matricula" placeholder="1234 ABC" style="text-transform:uppercase;" />
+      </div>
+      <div class="field">
+        <label>Licencia</label>
+        <input id="new-licencia" placeholder="Nº VTC / Taxi" />
+      </div>
+      <div class="field">
+        <label>Contraseña</label>
+        <input id="new-password" type="password" placeholder="Mín. 6 caracteres" />
+      </div>
+      <div class="field">
+        <label>Rol</label>
+        <select id="new-rol">
+          <option value="conductor">Conductor</option>
+          <option value="conductor_pendiente">Pendiente</option>
+        </select>
+      </div>
+      <button class="btn-add" onclick="addUsuario()">➕ Añadir</button>
+    </div>
+    <div id="add-message" style="margin-top:0.5rem; font-size:0.85rem; color:#34a853;"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ═══════════ CONFIGURACIÓN ═══════════
+const SB_URL = 'https://ejbvfirfodfktekgpwkm.supabase.co';
+const SB_KEY = 'sb_publishable_ZNwpPu1uqxZfKWOU6FDgbQ_0sLhGrXt';
+const sb = supabase.createClient(SB_URL, SB_KEY);
+
+let currentAdmin = null;
+
+// ── Elementos ──
+const loginSection = document.getElementById('login-section');
+const adminPanel = document.getElementById('admin-panel');
+const loginError = document.getElementById('login-error');
+const tbody = document.getElementById('usuarios-tbody');
+
+// ── Login Admin ──
+async function adminLogin() {
+  const email = document.getElementById('admin-email').value.trim();
+  const password = document.getElementById('admin-password').value;
+  loginError.textContent = '';
+
+  if (!email || !password) {
+    loginError.textContent = 'Completa todos los campos.';
+    return;
+  }
+
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+
+    const { data: perfil, error: perfilError } = await sb
+      .from('perfiles')
+      .select('rol, nombre')
+      .eq('id', data.user.id)
+      .single();
+
+    if (perfilError || perfil.rol !== 'admin') {
+      await sb.auth.signOut();
+      throw new Error('No tienes permisos de administrador.');
+    }
+
+    currentAdmin = { ...data.user, nombre: perfil.nombre };
+    document.getElementById('admin-name').textContent = perfil.nombre || 'Admin';
+    loginSection.classList.add('hidden');
+    adminPanel.classList.remove('hidden');
+    cargarUsuarios();
+  } catch (err) {
+    loginError.textContent = '❌ ' + err.message;
+  }
+}
+
+// ── Cargar usuarios (ordenados por updated_at) ──
+async function cargarUsuarios() {
+  try {
+    const { data, error } = await sb
+      .from('perfiles')
+      .select('*')
+      .in('rol', ['conductor', 'conductor_pendiente'])
+      .order('updated_at', { ascending: false });
+
+    if (error) throw error;
+    renderizarUsuarios(data || []);
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#f87171;">Error: ${err.message}</td></tr>`;
+  }
+}
+
+function renderizarUsuarios(lista) {
+  if (!lista.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#6b7280;padding:2rem;">No hay conductores registrados</td></tr>`;
+    return;
+  }
+
+  let html = '';
+  lista.forEach(u => {
+    const rolClass = u.rol === 'conductor' ? 'conductor' : 'conductor_pendiente';
+    const rolLabel = u.rol === 'conductor' ? 'Conductor' : 'Pendiente';
+    html += `
+      <tr>
+        <td><strong>${u.nombre || '—'}</strong></td>
+        <td>${u.email || '—'}</td>
+        <td>${u.telefono || '—'}</td>
+        <td>${u.vehiculo || '—'}</td>
+        <td>${u.matricula || '—'}</td>
+        <td>${u.licencia || '—'}</td>
+        <td><span class="badge-role ${rolClass}">${rolLabel}</span></td>
+        <td>
+          <div class="actions">
+            <button class="btn btn-primary" onclick="cambiarRol('${u.id}')" style="padding:0.2rem 0.6rem;font-size:0.7rem;">Cambiar rol</button>
+            <button class="btn btn-danger" onclick="eliminarUsuario('${u.id}')" style="padding:0.2rem 0.6rem;font-size:0.7rem;">Eliminar</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+  tbody.innerHTML = html;
+}
+
+// ── Cambiar rol ──
+async function cambiarRol(id) {
+  if (!confirm('¿Cambiar el rol de este usuario?')) return;
+  try {
+    const { data, error } = await sb
+      .from('perfiles')
+      .select('rol')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+
+    const nuevoRol = data.rol === 'conductor' ? 'conductor_pendiente' : 'conductor';
+    const { error: updateErr } = await sb
+      .from('perfiles')
+      .update({ rol: nuevoRol, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (updateErr) throw updateErr;
+
+    toast('Rol actualizado a ' + nuevoRol);
+    cargarUsuarios();
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+}
+
+// ── Eliminar usuario ──
+async function eliminarUsuario(id) {
+  if (!confirm('¿Eliminar este usuario definitivamente?')) return;
+  try {
+    const { error } = await sb
+      .from('perfiles')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+
+    toast('Usuario eliminado correctamente.');
+    cargarUsuarios();
+  } catch (err) {
+    alert('Error al eliminar: ' + err.message);
+  }
+}
+
+// ── Añadir usuario (sin created_at) ──
+async function addUsuario() {
+  const nombre   = document.getElementById('new-nombre').value.trim();
+  const email    = document.getElementById('new-email').value.trim();
+  const telefono = document.getElementById('new-telefono').value.trim();
+  const vehiculo = document.getElementById('new-vehiculo').value.trim();
+  const matricula= document.getElementById('new-matricula').value.trim().toUpperCase();
+  const licencia = document.getElementById('new-licencia').value.trim();
+  const password = document.getElementById('new-password').value;
+  const rol      = document.getElementById('new-rol').value;
+  const msgDiv   = document.getElementById('add-message');
+
+  msgDiv.textContent = '';
+
+  if (!nombre || !email || !telefono || !vehiculo || !matricula || !password) {
+    msgDiv.style.color = '#f87171';
+    msgDiv.textContent = 'Rellena todos los campos obligatorios.';
+    return;
+  }
+  if (password.length < 6) {
+    msgDiv.style.color = '#f87171';
+    msgDiv.textContent = 'La contraseña debe tener al menos 6 caracteres.';
+    return;
+  }
+
+  const btn = document.querySelector('.btn-add');
+  btn.disabled = true;
+  btn.textContent = 'Creando...';
+
+  try {
+    // 1. Crear usuario en Auth
+    const { data, error } = await sb.auth.signUp({ email, password });
+    if (error) throw error;
+
+    const uid = data.user?.id;
+    if (!uid) throw new Error('No se pudo crear el usuario.');
+
+    // 2. Insertar perfil (sin created_at, solo updated_at)
+    const { error: perfilError } = await sb.from('perfiles').insert({
+      id: uid,
+      nombre,
+      email,
+      telefono,
+      vehiculo,
+      matricula,
+      licencia: licencia || null,
+      rol: rol,
+      updated_at: new Date().toISOString()
+    });
+    if (perfilError) throw perfilError;
+
+    msgDiv.style.color = '#34a853';
+    msgDiv.textContent = '✅ Usuario creado correctamente.';
+    // Limpiar formulario
+    document.getElementById('new-nombre').value = '';
+    document.getElementById('new-email').value = '';
+    document.getElementById('new-telefono').value = '';
+    document.getElementById('new-vehiculo').value = '';
+    document.getElementById('new-matricula').value = '';
+    document.getElementById('new-licencia').value = '';
+    document.getElementById('new-password').value = '';
+    cargarUsuarios();
+  } catch (err) {
+    msgDiv.style.color = '#f87171';
+    msgDiv.textContent = '❌ ' + err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '➕ Añadir';
+  }
+}
+
+// ── Logout ──
+function adminLogout() {
+  sb.auth.signOut();
+  currentAdmin = null;
+  loginSection.classList.remove('hidden');
+  adminPanel.classList.add('hidden');
+  document.getElementById('admin-email').value = '';
+  document.getElementById('admin-password').value = '';
+  loginError.textContent = '';
+}
+
+// ── Toast ──
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── Verificar sesión activa al cargar ──
+sb.auth.getSession().then(({ data: { session } }) => {
+  if (session?.user) {
+    sb.from('perfiles').select('rol, nombre').eq('id', session.user.id).single()
+      .then(({ data }) => {
+        if (data?.rol === 'admin') {
+          currentAdmin = { ...session.user, nombre: data.nombre };
+          document.getElementById('admin-name').textContent = data.nombre || 'Admin';
+          loginSection.classList.add('hidden');
+          adminPanel.classList.remove('hidden');
+          cargarUsuarios();
+        }
+      });
+  }
+});
+</script>
+</body>
+</html>
