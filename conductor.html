@@ -12,39 +12,117 @@
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: 'Inter', sans-serif; background: #0f1117; color: #e8e8f0; height: 100vh; overflow: hidden; }
 
-    #login-screen {
+    #auth-screen {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      height: 100vh; padding: 1.5rem; background: #0f1117;
+      height: 100vh; padding: 1.5rem; background: #0f1117; overflow-y: auto;
     }
-    #login-screen h1 { font-size: 2rem; color: #3ecf8e; margin-bottom: 1rem; }
-    #login-screen input {
-      padding: 0.8rem 1rem; border-radius: 10px; border: 1px solid #2a2a45;
-      background: rgba(255,255,255,0.05); color: white; width: 280px; font-size: 1rem; margin-bottom: 0.8rem;
+    .auth-card {
+      background: #1a1a2e; border: 1px solid #2a2a45; border-radius: 16px;
+      padding: 1.8rem 1.5rem; width: 100%; max-width: 340px;
     }
-    #login-screen button {
-      padding: 0.8rem; border-radius: 10px; background: #3ecf8e; color: #0f1117;
-      font-weight: 700; border: none; cursor: pointer; width: 280px; font-size: 1rem;
+    .auth-card h1 { font-size: 1.8rem; color: #3ecf8e; margin-bottom: 0.3rem; }
+    .auth-card .subtitle { color: #6b7280; font-size: 0.85rem; margin-bottom: 1.2rem; }
+    .auth-tabs { display: flex; gap: 1rem; margin-bottom: 1.2rem; border-bottom: 1px solid #2a2a45; }
+    .auth-tabs button {
+      background: transparent; border: none; color: #6b7280; font-weight: 600;
+      font-size: 0.9rem; cursor: pointer; padding: 0.4rem 0; border-bottom: 2px solid transparent;
+      margin-bottom: -1px; width: auto;
     }
-    #login-screen .error { color: #f87171; font-size: 0.9rem; margin-top: 0.5rem; }
-    #login-screen .link { color: #3ecf8e; cursor: pointer; }
+    .auth-tabs button.active { color: #3ecf8e; border-bottom-color: #3ecf8e; }
+    .auth-form { display: none; }
+    .auth-form.active { display: block; }
+    .auth-card input {
+      width: 100%; padding: 0.7rem 1rem; border-radius: 8px; border: 1px solid #2a2a45;
+      background: rgba(255,255,255,0.05); color: #e8e8f0; font-size: 0.95rem;
+      margin-bottom: 0.7rem; font-family: 'Inter', sans-serif;
+    }
+    .auth-card input::placeholder { color: #4a4a6a; }
+    .auth-card .btn-main {
+      width: 100%; padding: 0.8rem; border: none; border-radius: 8px;
+      background: #3ecf8e; color: #0f1117; font-weight: 700; font-size: 1rem;
+      cursor: pointer; margin-top: 0.2rem; font-family: 'Inter', sans-serif;
+    }
+    .auth-card .btn-main:hover { opacity: 0.88; }
+    .auth-card .btn-main:disabled { opacity: 0.5; cursor: not-allowed; }
+    .auth-card .error { color: #f87171; font-size: 0.85rem; margin-top: 0.5rem; }
+    .auth-card .success { color: #34a853; font-size: 0.85rem; margin-top: 0.5rem; }
+    .field-label { font-size: 0.72rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem; }
+    .field-group { margin-bottom: 0.1rem; }
+    .section-sep { border: none; border-top: 1px solid #2a2a45; margin: 0.8rem 0; }
+
+    /* Pantalla pendiente */
+    #pendiente-screen {
+      display: none; flex-direction: column; align-items: center; justify-content: center;
+      height: 100vh; padding: 2rem; background: #0f1117; text-align: center;
+    }
+    #pendiente-screen .icon { font-size: 3rem; margin-bottom: 1rem; }
+    #pendiente-screen h2 { color: #fbbc04; margin-bottom: 0.5rem; }
+    #pendiente-screen p { color: #6b7280; font-size: 0.9rem; line-height: 1.5; max-width: 280px; }
+    #pendiente-screen .btn-salir {
+      margin-top: 1.5rem; background: transparent; border: 1px solid #2a2a45;
+      color: #6b7280; border-radius: 8px; padding: 0.6rem 1.5rem; cursor: pointer;
+      font-family: 'Inter', sans-serif;
+    }
 
     #app-main { display: none; flex-direction: column; height: 100vh; background: #1a1a2e; }
     #map { height: 45vh; width: 100%; background: #0f1117; }
     #solicitudes-container { flex: 1; overflow-y: auto; padding: 0.8rem 1rem; }
     .solicitud-card {
-      background: #2a2a45; border-radius: 14px; padding: 0.8rem 1rem; margin-bottom: 0.8rem;
+      background: #2a2a45; border-radius: 14px; padding: 0.9rem 1rem 0.8rem; margin-bottom: 0.8rem;
       border: 1px solid #3a3a5a;
     }
-    .solicitud-card .info { display: flex; flex-wrap: wrap; gap: 0.4rem 0.8rem; font-size: 0.9rem; }
-    .solicitud-card .precio { color: #fbbc04; font-weight: 700; }
+    .solicitud-card .ruta-line {
+      display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 0.5rem;
+    }
+    .ruta-dots {
+      display: flex; flex-direction: column; align-items: center; gap: 2px; padding-top: 3px; flex-shrink: 0;
+    }
+    .dot-orig { width: 10px; height: 10px; border-radius: 50%; background: #34a853; border: 2px solid white; box-shadow: 0 0 0 2px #34a853; }
+    .dot-line { width: 2px; height: 14px; background: #4a4a6a; }
+    .dot-dest { width: 10px; height: 10px; border-radius: 2px; background: #ea4335; }
+    .ruta-nombres { flex: 1; }
+    .ruta-nombres .origen { font-size: 0.9rem; font-weight: 600; color: #e8e8f0; }
+    .ruta-nombres .destino { font-size: 0.9rem; color: #b0b0c8; margin-top: 6px; }
+    .solicitud-card .meta-row { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; font-size: 0.82rem; margin-bottom: 0.6rem; color: #9aa0a6; }
+    .solicitud-card .precio { color: #fbbc04; font-weight: 700; font-size: 1rem; }
     .solicitud-card .distancia { color: #34a853; }
+    .solicitud-card .tarifa-badge {
+      background: #1a73e8; color: white; font-size: 0.7rem; font-weight: 700;
+      border-radius: 4px; padding: 1px 5px;
+    }
+    .solicitud-card .btn-row { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
     .solicitud-card .btn-aceptar {
-      background: #34a853; color: white; border: none; border-radius: 8px;
-      padding: 0.3rem 1rem; font-weight: 600; cursor: pointer; margin-top: 0.4rem;
+      flex: 1; background: #34a853; color: white; border: none; border-radius: 8px;
+      padding: 0.45rem 1rem; font-weight: 600; font-size: 0.9rem; cursor: pointer;
     }
     .solicitud-card .btn-aceptar:hover { background: #2d9248; }
+    .solicitud-card .btn-ruta {
+      background: #1a73e8; color: white; border: none; border-radius: 8px;
+      padding: 0.45rem 0.8rem; font-size: 0.85rem; cursor: pointer; white-space: nowrap;
+    }
+    .solicitud-card .btn-ruta:hover { background: #1557b0; }
     .empty-state { text-align: center; padding: 2rem; color: #6b7280; font-size: 0.95rem; }
     .empty-state .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    #mapa-ruta-overlay {
+      display: none; position: fixed; inset: 0; background: #0f1117; z-index: 2000;
+      flex-direction: column;
+    }
+    #mapa-ruta-overlay.show { display: flex; }
+    #mapa-ruta-header {
+      background: #1a1a2e; padding: 0.8rem 1rem; display: flex; align-items: center; gap: 0.8rem;
+      border-bottom: 1px solid #2a2a45; flex-shrink: 0;
+    }
+    #mapa-ruta-header h3 { flex: 1; font-size: 0.95rem; color: #e8e8f0; }
+    #btn-cerrar-ruta {
+      background: #ea4335; color: white; border: none; border-radius: 8px;
+      padding: 0.35rem 0.9rem; font-size: 0.85rem; cursor: pointer; font-weight: 600;
+    }
+    #mapa-ruta-info {
+      background: #1a1a2e; padding: 0.5rem 1rem; font-size: 0.82rem; color: #9aa0a6;
+      flex-shrink: 0; border-bottom: 1px solid #2a2a45;
+    }
+    #mapa-ruta-info span { color: #3ecf8e; font-weight: 600; }
+    #mapa-ruta { flex: 1; }
 
     #btn-logout {
       position: fixed; top: 10px; right: 10px; z-index: 1000;
@@ -58,16 +136,57 @@
 </head>
 <body>
 
-<!-- Login -->
-<div id="login-screen">
-  <h1>🚖 Conductores</h1>
-  <input id="login-email" type="email" placeholder="Email" />
-  <input id="login-password" type="password" placeholder="Contraseña" />
-  <button onclick="loginConductor()">Iniciar sesión</button>
-  <div id="login-error" class="error"></div>
-  <div style="margin-top:1rem; font-size:0.8rem; color:#6b7280;">
-    ¿No eres conductor? <a href="/Tazi/" style="color:#3ecf8e;">Ir a app de usuarios</a>
+<!-- ═══ AUTH ═══ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <h1>🚖 Conductores</h1>
+    <p class="subtitle">Panel de conductores · Tazi Madrid</p>
+    <div class="auth-tabs">
+      <button class="active" onclick="switchAuthTab('login')">Iniciar sesión</button>
+      <button onclick="switchAuthTab('register')">Registrarse</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="form-login" class="auth-form active">
+      <input id="login-email" type="email" placeholder="Correo electrónico" autocomplete="email" />
+      <input id="login-password" type="password" placeholder="Contraseña" autocomplete="current-password" />
+      <button class="btn-main" onclick="loginConductor()">Iniciar sesión</button>
+      <div id="login-error" class="error"></div>
+    </div>
+
+    <!-- REGISTRO -->
+    <div id="form-register" class="auth-form">
+      <div class="field-group">
+        <div class="field-label">Datos personales</div>
+        <input id="reg-nombre" type="text" placeholder="Nombre completo" />
+        <input id="reg-telefono" type="tel" placeholder="Teléfono de contacto" />
+        <input id="reg-email" type="email" placeholder="Correo electrónico" autocomplete="email" />
+        <input id="reg-password" type="password" placeholder="Contraseña (mín. 6 caracteres)" autocomplete="new-password" />
+      </div>
+      <hr class="section-sep"/>
+      <div class="field-group">
+        <div class="field-label">Datos del vehículo</div>
+        <input id="reg-vehiculo" type="text" placeholder="Marca y modelo (ej. Toyota Prius)" />
+        <input id="reg-matricula" type="text" placeholder="Matrícula (ej. 1234 ABC)" style="text-transform:uppercase;" />
+        <input id="reg-licencia" type="text" placeholder="Nº licencia VTC / Taxi" />
+      </div>
+      <button class="btn-main" onclick="registrarConductor()">Solicitar registro</button>
+      <div id="reg-error" class="error"></div>
+      <div id="reg-success" class="success"></div>
+    </div>
+
+    <div style="margin-top:1rem; font-size:0.8rem; color:#6b7280; text-align:center;">
+      ¿Eres pasajero? <a href="/Tazi/" style="color:#3ecf8e;">Ir a la app</a>
+    </div>
   </div>
+</div>
+
+<!-- ═══ PENDIENTE DE APROBACIÓN ═══ -->
+<div id="pendiente-screen">
+  <div class="icon">⏳</div>
+  <h2>Solicitud recibida</h2>
+  <p>Tu registro está pendiente de revisión.<br/>Recibirás acceso en cuanto el equipo de Tazi apruebe tu cuenta.</p>
+  <button class="btn-salir" onclick="logoutPendiente()">Salir</button>
 </div>
 
 <!-- App principal -->
@@ -80,6 +199,16 @@
     </div>
   </div>
   <button id="btn-logout" onclick="logout()">✕ Salir</button>
+</div>
+
+<!-- Overlay mapa de ruta usuario -->
+<div id="mapa-ruta-overlay">
+  <div id="mapa-ruta-header">
+    <h3 id="mapa-ruta-titulo">Ruta del viaje</h3>
+    <button id="btn-cerrar-ruta" onclick="cerrarMapaRuta()">✕ Cerrar</button>
+  </div>
+  <div id="mapa-ruta-info">📍 <span id="mapa-ruta-orig">—</span> → <span id="mapa-ruta-dest">—</span> · <span id="mapa-ruta-dist">—</span> · <span id="mapa-ruta-tiempo">—</span></div>
+  <div id="mapa-ruta"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -100,6 +229,39 @@ let watchId = null;
 let channel = null;
 let solicitudMarkers = [];
 
+// ── Tabs auth ──
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tabs button').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+  if (tab === 'login') {
+    document.querySelector('.auth-tabs button:first-child').classList.add('active');
+    document.getElementById('form-login').classList.add('active');
+    document.getElementById('login-error').textContent = '';
+  } else {
+    document.querySelector('.auth-tabs button:last-child').classList.add('active');
+    document.getElementById('form-register').classList.add('active');
+    document.getElementById('reg-error').textContent = '';
+    document.getElementById('reg-success').textContent = '';
+  }
+}
+
+// ── Pantallas ──
+function mostrarAuth() {
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('pendiente-screen').style.display = 'none';
+  document.getElementById('app-main').style.display = 'none';
+}
+function mostrarPendiente() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('pendiente-screen').style.display = 'flex';
+  document.getElementById('app-main').style.display = 'none';
+}
+function mostrarApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('pendiente-screen').style.display = 'none';
+  document.getElementById('app-main').style.display = 'flex';
+}
+
 // ── Login ──
 async function loginConductor() {
   const email = document.getElementById('login-email').value.trim();
@@ -107,10 +269,7 @@ async function loginConductor() {
   const errorDiv = document.getElementById('login-error');
   errorDiv.textContent = '';
 
-  if (!email || !password) {
-    errorDiv.textContent = 'Completa todos los campos.';
-    return;
-  }
+  if (!email || !password) { errorDiv.textContent = 'Completa todos los campos.'; return; }
 
   try {
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
@@ -118,26 +277,90 @@ async function loginConductor() {
 
     const { data: perfil, error: perfilError } = await sb
       .from('perfiles')
-      .select('rol')
+      .select('rol, estado_conductor')
       .eq('id', data.user.id)
       .single();
 
-    if (perfilError || perfil.rol !== 'conductor') {
-      await sb.auth.signOut();
-      throw new Error('No tienes permisos de conductor.');
-    }
+    if (perfilError) throw new Error('No se encontró tu perfil.');
 
-    currentUser = data.user;
-    iniciarApp();
+    if (perfil.rol === 'conductor' || perfil.rol === 'conductor_pendiente') {
+      currentUser = data.user;
+      iniciarApp();
+    } else {
+      await sb.auth.signOut();
+      throw new Error('Esta cuenta no está registrada como conductor.');
+    }
   } catch (err) {
     errorDiv.textContent = '❌ ' + err.message;
   }
 }
 
+// ── Registro de conductor ──
+async function registrarConductor() {
+  const nombre   = document.getElementById('reg-nombre').value.trim();
+  const telefono = document.getElementById('reg-telefono').value.trim();
+  const email    = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const vehiculo = document.getElementById('reg-vehiculo').value.trim();
+  const matricula= document.getElementById('reg-matricula').value.trim().toUpperCase();
+  const licencia = document.getElementById('reg-licencia').value.trim();
+  const errDiv   = document.getElementById('reg-error');
+  const okDiv    = document.getElementById('reg-success');
+  errDiv.textContent = '';
+  okDiv.textContent = '';
+
+  if (!nombre || !telefono || !email || !password || !vehiculo || !matricula) {
+    errDiv.textContent = 'Rellena todos los campos obligatorios.'; return;
+  }
+  if (password.length < 6) { errDiv.textContent = 'La contraseña debe tener al menos 6 caracteres.'; return; }
+
+  const btn = document.querySelector('#form-register .btn-main');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  try {
+    // 1. Crear usuario en Auth
+    const { data, error } = await sb.auth.signUp({ email, password });
+    if (error) throw error;
+
+    const uid = data.user?.id;
+    if (!uid) throw new Error('No se pudo crear la cuenta. Intenta de nuevo.');
+
+    // 2. Insertar perfil con rol conductor (acceso inmediato)
+    const { error: perfilError } = await sb.from('perfiles').upsert({
+      id: uid,
+      nombre,
+      telefono,
+      email,
+      vehiculo,
+      matricula,
+      licencia: licencia || null,
+      rol: 'conductor',
+      created_at: new Date().toISOString()
+    });
+    if (perfilError) throw perfilError;
+
+    okDiv.textContent = '✅ Cuenta creada. Entrando...';
+    btn.textContent = '✅ Listo';
+    currentUser = data.user;
+    setTimeout(() => iniciarApp(), 1000);
+
+  } catch (err) {
+    errDiv.textContent = '❌ ' + err.message;
+    btn.disabled = false;
+    btn.textContent = 'Solicitar registro';
+  }
+}
+
+function logoutPendiente() {
+  sb.auth.signOut();
+  mostrarAuth();
+  switchAuthTab('login');
+}
+
 // ── Iniciar app ──
 function iniciarApp() {
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app-main').style.display = 'flex';
+  mostrarApp();
   initMap();
   startGPS();
   cargarSolicitudes();
@@ -224,35 +447,133 @@ function renderizarSolicitudes(lista) {
 
   let html = '';
   lista.forEach(s => {
-    const dist = distanciaKm(conductorPos.lat, conductorPos.lng, s.origen_lat, s.origen_lng);
-    const tiempo = Math.round((dist / 30) * 60);
+    const dist = conductorPos
+      ? distanciaKm(conductorPos.lat, conductorPos.lng, s.origen_lat, s.origen_lng)
+      : null;
+    const tiempo = dist ? Math.round((dist / 30) * 60) : null;
+    const distViaje = s.distancia_km ? s.distancia_km.toFixed(1) : '—';
+    const tarifa = s.tarifa_key ? s.tarifa_key.toUpperCase() : '';
+    const precio = (typeof s.precio === 'number') ? s.precio.toFixed(2) : '—';
+
     html += `
       <div class="solicitud-card">
-        <div class="info">
-          <span><strong>${s.origen_nombre || 'Origen'}</strong> → ${s.destino_nombre || 'Destino'}</span>
-          <span class="precio">💰 ${s.precio.toFixed(2)} €</span>
-          <span class="distancia">📏 ${s.distancia_km.toFixed(1)} km</span>
+        <div class="ruta-line">
+          <div class="ruta-dots">
+            <div class="dot-orig"></div>
+            <div class="dot-line"></div>
+            <div class="dot-dest"></div>
+          </div>
+          <div class="ruta-nombres">
+            <div class="origen">📍 ${s.origen_nombre || 'Origen'}</div>
+            <div class="destino">🏁 ${s.destino_nombre || 'Destino'}</div>
+          </div>
         </div>
-        <div style="font-size:0.8rem;color:#9aa0a6;">🚗 ${dist.toFixed(1)} km de ti · ⏱ ~${tiempo} min</div>
-        <button class="btn-aceptar" onclick="aceptarSolicitud('${s.id}')">✅ Aceptar</button>
+        <div class="meta-row">
+          <span class="precio">💰 ${precio} €</span>
+          ${tarifa ? `<span class="tarifa-badge">${tarifa}</span>` : ''}
+          <span class="distancia">📏 ${distViaje} km de viaje</span>
+          ${dist !== null ? `<span>🚗 ${dist.toFixed(1)} km de ti · ⏱ ~${tiempo} min</span>` : ''}
+        </div>
+        <div class="btn-row">
+          <button class="btn-ruta" onclick="verRuta(${JSON.stringify(s).replace(/"/g,'&quot;')})">🗺️ Ver ruta</button>
+          <button class="btn-aceptar" onclick="aceptarSolicitud('${s.id}')">✅ Aceptar</button>
+        </div>
       </div>
     `;
   });
   container.innerHTML = html;
 
-  // Marcadores en el mapa
+  // Marcadores en el mapa del conductor
   solicitudMarkers.forEach(m => map.removeLayer(m));
   solicitudMarkers = [];
   lista.forEach(s => {
-    const marker = L.marker([s.origen_lat, s.origen_lng])
+    const iconOrig = L.divIcon({
+      html: '<div style="background:#34a853;width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 3px rgba(52,168,83,0.4);"></div>',
+      iconSize: [12,12], iconAnchor: [6,6]
+    });
+    const m = L.marker([s.origen_lat, s.origen_lng], { icon: iconOrig })
       .addTo(map)
       .bindPopup(`
-        <b>${s.origen_nombre || 'Origen'}</b><br/>
-        Destino: ${s.destino_nombre || 'Destino'}<br/>
-        Precio: ${s.precio.toFixed(2)} €
+        <b>📍 ${s.origen_nombre || 'Origen'}</b><br/>
+        🏁 ${s.destino_nombre || 'Destino'}<br/>
+        💰 ${(s.precio||0).toFixed(2)} € · ${s.distancia_km ? s.distancia_km.toFixed(1)+' km' : ''}
       `);
-    solicitudMarkers.push(marker);
+    solicitudMarkers.push(m);
   });
+}
+
+// ── Ver ruta del viaje en overlay ──
+let mapaRuta = null;
+let mapaRutaLayer = null;
+
+function verRuta(s) {
+  document.getElementById('mapa-ruta-overlay').classList.add('show');
+  document.getElementById('mapa-ruta-orig').textContent = s.origen_nombre || 'Origen';
+  document.getElementById('mapa-ruta-dest').textContent = s.destino_nombre || 'Destino';
+  document.getElementById('mapa-ruta-dist').textContent = s.distancia_km ? s.distancia_km.toFixed(1) + ' km' : '—';
+  document.getElementById('mapa-ruta-tiempo').textContent = '⏳ Calculando...';
+
+  setTimeout(() => {
+    if (!mapaRuta) {
+      mapaRuta = L.map('mapa-ruta').setView([s.origen_lat, s.origen_lng], 13);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '© OSM, © CARTO', maxZoom: 19, subdomains: 'abcd'
+      }).addTo(mapaRuta);
+    } else {
+      if (mapaRutaLayer) { mapaRuta.removeLayer(mapaRutaLayer); mapaRutaLayer = null; }
+      mapaRuta.eachLayer(l => { if (l instanceof L.Marker) mapaRuta.removeLayer(l); });
+    }
+    mapaRuta.invalidateSize();
+
+    // Marcador origen
+    const iconOrig = L.divIcon({
+      html: '<div style="background:#34a853;width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 3px rgba(52,168,83,0.5);"></div>',
+      iconSize: [14,14], iconAnchor: [7,7]
+    });
+    L.marker([s.origen_lat, s.origen_lng], { icon: iconOrig })
+      .addTo(mapaRuta)
+      .bindPopup(`<b>📍 ${s.origen_nombre || 'Origen'}</b>`).openPopup();
+
+    // Marcador destino
+    const pinSvg = `<svg width="22" height="30" viewBox="0 0 26 36"><path d="M13 0C5.82 0 0 5.82 0 13c0 9.1 13 23 13 23S26 22.1 26 13C26 5.82 20.18 0 13 0z" fill="#ea4335"/><circle cx="13" cy="13" r="5.5" fill="white"/></svg>`;
+    const iconDest = L.divIcon({ html: pinSvg, iconSize: [22,30], iconAnchor: [11,30] });
+    L.marker([s.destino_lat, s.destino_lng], { icon: iconDest })
+      .addTo(mapaRuta)
+      .bindPopup(`<b>🏁 ${s.destino_nombre || 'Destino'}</b>`);
+
+    // Ruta OSRM
+    const url = `https://router.project-osrm.org/route/v1/driving/${s.origen_lng},${s.origen_lat};${s.destino_lng},${s.destino_lat}?overview=full&geometries=geojson`;
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        if (data.code === 'Ok' && data.routes && data.routes.length) {
+          const route = data.routes[0];
+          const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+          mapaRutaLayer = L.polyline(coords, { color: '#1a73e8', weight: 5, opacity: 0.85 }).addTo(mapaRuta);
+          mapaRuta.fitBounds(mapaRutaLayer.getBounds(), { padding: [30, 30] });
+          const mins = Math.round(route.duration / 60);
+          const km = (route.distance / 1000).toFixed(1);
+          document.getElementById('mapa-ruta-dist').textContent = km + ' km';
+          document.getElementById('mapa-ruta-tiempo').textContent = '~' + mins + ' min';
+        } else {
+          fallbackBounds(s);
+        }
+      })
+      .catch(() => fallbackBounds(s));
+  }, 100);
+}
+
+function fallbackBounds(s) {
+  const bounds = L.latLngBounds(
+    [s.origen_lat, s.origen_lng],
+    [s.destino_lat, s.destino_lng]
+  );
+  mapaRuta.fitBounds(bounds, { padding: [40, 40] });
+  document.getElementById('mapa-ruta-tiempo').textContent = '—';
+}
+
+function cerrarMapaRuta() {
+  document.getElementById('mapa-ruta-overlay').classList.remove('show');
 }
 
 // ── Aceptar solicitud ──
@@ -322,8 +643,8 @@ function logout() {
   if (channel) sb.removeChannel(channel);
   sb.auth.signOut();
   currentUser = null;
-  document.getElementById('app-main').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
+  mostrarAuth();
+  switchAuthTab('login');
   document.getElementById('login-email').value = '';
   document.getElementById('login-password').value = '';
   document.getElementById('login-error').textContent = '';
@@ -334,7 +655,7 @@ sb.auth.getSession().then(({ data: { session } }) => {
   if (session?.user) {
     sb.from('perfiles').select('rol').eq('id', session.user.id).single()
       .then(({ data }) => {
-        if (data?.rol === 'conductor') {
+        if (data?.rol === 'conductor' || data?.rol === 'conductor_pendiente') {
           currentUser = session.user;
           iniciarApp();
         }
