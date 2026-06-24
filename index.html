@@ -318,18 +318,20 @@ try {
 // TARIFAS (oficiales Madrid 2026)
 // ═══════════════════════════════════════════════════════════════════
 const TARIFAS = {
-  t1: { id:'T1', nombre:'Laborable diurno', horario:'Lun–Vie 7:00–21:00 h', tipo:'metro', bandera:2.55, km:1.40, min:4.50 },
-  t2: { id:'T2', nombre:'Nocturno y festivos', horario:'Diario 21:00–7:00 h · Sáb/Dom/Fest 7:00–21:00 h', tipo:'metro', bandera:3.20, km:1.60, min:5.50 },
-  t4: { id:'T4', nombre:'Aeropuerto → dentro M-30', horario:'24h · 365 días', tipo:'fijo', precio_fijo:33.00, nota:'Tarifa fija aeropuerto a cualquier punto dentro de la M-30' },
-  t3: { id:'T3', nombre:'Aeropuerto → fuera M-30', horario:'24h · 365 días', tipo:'minimo_luego_metro', minimo:22.00, franquicia_km:9.0, km_t1:1.40, km_t2:1.60, nota:'Mínimo 22€ cubre 9 km, luego T1/T2' },
-  t7: { id:'T7', nombre:'Estaciones y IFEMA', horario:'24h · 365 días', tipo:'salida_especial', salida:8.00, franquicia_m:1450, km:1.40, km_noche:1.60, nota:'Salida especial: Atocha, Chamartín, Av. América, Méndez Álvaro, IFEMA' }
+  t1: { id:'T1', nombre:'Laborable diurno',          horario:'Lun–Vie 7:00–21:00 h',                                    tipo:'metro',           bandera:2.55, km:1.40, minuto:0.28, min_carrera:4.50 },
+  t2: { id:'T2', nombre:'Nocturno y festivos',        horario:'Diario 21:00–7:00 h · Sáb/Dom/Fest 7:00–21:00 h',       tipo:'metro',           bandera:3.20, km:1.60, minuto:0.33, min_carrera:5.50 },
+  t4: { id:'T4', nombre:'Aeropuerto → dentro M-30',  horario:'24h · 365 días',                                          tipo:'fijo',            precio_fijo:33.00 },
+  t3: { id:'T3', nombre:'Aeropuerto → fuera M-30',   horario:'24h · 365 días',                                          tipo:'minimo_luego_metro', minimo:22.00, franquicia_km:9.0, km_t1:1.40, km_t2:1.60 },
+  t7: { id:'T7', nombre:'Estaciones y IFEMA',         horario:'24h · 365 días',                                          tipo:'salida_especial', salida:8.00, franquicia_m:1450, km:1.40, km_noche:1.60 }
 };
 
 // ═══════════════════════════════════════════════════════════════════
-// DETECCIÓN DE ORIGEN (aeropuerto, estación, ciudad)
 // ═══════════════════════════════════════════════════════════════════
-const AIRPORT_COORDS = { lat: 40.4722, lng: -3.5604 };
-const AIRPORT_RADIUS_KM = 4.0;
+// DETECCIÓN DE PUNTOS (aeropuerto, estación, M-30)
+// ═══════════════════════════════════════════════════════════════════
+const AIRPORT_COORDS   = { lat: 40.4722, lng: -3.5604 };
+const AIRPORT_RADIUS_KM = 3.5;
+
 const STATION_COORDS = [
   { lat: 40.4060, lng: -3.6897 },  // Atocha
   { lat: 40.4729, lng: -3.6823 },  // Chamartín
@@ -338,7 +340,10 @@ const STATION_COORDS = [
   { lat: 40.4695, lng: -3.5988 }   // IFEMA
 ];
 const STATION_RADIUS_KM = 0.8;
-const CENTRO_M30 = { lat: 40.4168, lng: -3.7038 };
+
+// Radio aproximado de la M-30 desde el centro (Puerta del Sol)
+const CENTRO_M30       = { lat: 40.4168, lng: -3.7038 };
+const M30_RADIO_KM     = 4.5; // la M-30 envuelve el centro a ~4-5 km
 
 function distanciaKm(a, b) {
   const R = 6371;
@@ -348,18 +353,24 @@ function distanciaKm(a, b) {
   return R * 2 * Math.asin(Math.sqrt(a1));
 }
 
-function detectarOrigen() {
-  const origen = origPos || myPos;
-  if (!origen) return 'ciudad';
-  const nombre = (origName || '').toLowerCase();
-  if (nombre.includes('aeropuerto') || nombre.includes('barajas')) return 'aeropuerto';
-  const estacionesNombres = ['atocha', 'chamartín', 'américa', 'méndez álvaro', 'méndez alvaro', 'ifema'];
-  if (estacionesNombres.some(s => nombre.includes(s))) return 'estacion';
-  if (distanciaKm(origen, AIRPORT_COORDS) <= AIRPORT_RADIUS_KM) return 'aeropuerto';
-  for (let st of STATION_COORDS) {
-    if (distanciaKm(origen, st) <= STATION_RADIUS_KM) return 'estacion';
-  }
-  return 'ciudad';
+function esAeropuerto(pos, nombre) {
+  if (!pos) return false;
+  const n = (nombre || '').toLowerCase();
+  if (n.includes('aeropuerto') || n.includes('barajas') || n.includes('adolfo suárez')) return true;
+  return distanciaKm(pos, AIRPORT_COORDS) <= AIRPORT_RADIUS_KM;
+}
+
+function esEstacion(pos, nombre) {
+  if (!pos) return false;
+  const n = (nombre || '').toLowerCase();
+  const nombresEstacion = ['atocha', 'chamartín', 'chamartin', 'av. de américa', 'méndez álvaro', 'mendez alvaro', 'ifema'];
+  if (nombresEstacion.some(s => n.includes(s))) return true;
+  return STATION_COORDS.some(st => distanciaKm(pos, st) <= STATION_RADIUS_KM);
+}
+
+function dentroDeLaM30(pos) {
+  if (!pos) return false;
+  return distanciaKm(pos, CENTRO_M30) <= M30_RADIO_KM;
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -370,6 +381,7 @@ let map = null;
 let myPos = null;
 let destPos = null;
 let routeKm = null;
+let routeMinutos = null;
 let tarifaKey = 't1';
 let origName = 'Mi ubicación';
 let destName = '';
@@ -531,20 +543,29 @@ function startGPS() {
   watchId = navigator.geolocation.watchPosition(
     pos => {
       const { latitude, longitude } = pos.coords;
-      myPos = { lat: latitude, lng: longitude };
-      status.textContent = `📍 Ubicación obtenida (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
-      // Actualizar marcador sin recrearlo (evita parpadeo)
+      const nueva = { lat: latitude, lng: longitude };
+
+      // Solo actuar si la posición cambió más de 15 metros (evita parpadeo continuo)
+      if (myPos) {
+        const d = distanciaKm(myPos, nueva) * 1000;
+        if (d < 15) return;
+      }
+
+      myPos = nueva;
+      status.textContent = `📍 GPS activo (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+
       if (myMarker) {
         myMarker.setLatLng([latitude, longitude]);
       } else {
         const icon = L.divIcon({
           html: '<div style="background:#4285f4;width:16px;height:16px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 4px rgba(66,133,244,0.3);"></div>',
-          iconSize: [16,16],
-          iconAnchor: [8,8]
+          iconSize: [16,16], iconAnchor: [8,8]
         });
         myMarker = L.marker([latitude, longitude], { icon }).addTo(map);
+        centerMap(); // centrar solo la primera vez
       }
-      centerMap();
+
+      // Recalcular ruta solo si hay destino Y el mapa no está siendo usado
       if (destPos) fetchRoute();
     },
     err => {
@@ -552,7 +573,7 @@ function startGPS() {
       status.textContent = '⚠️ No se pudo obtener GPS. Usando Madrid centro.';
       setDefaultPosition();
     },
-    { enableHighAccuracy: true, timeout: 10000 }
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 }
   );
 }
 
@@ -676,7 +697,8 @@ function fetchRoute() {
       }
       const route = data.routes[0];
       routeKm = route.distance / 1000;
-      const duration = Math.round(route.duration / 60);
+      routeMinutos = route.duration / 60;
+      const duration = Math.round(routeMinutos);
 
       if (routeLayer) map.removeLayer(routeLayer);
       const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
@@ -705,6 +727,7 @@ function fetchRoute() {
       const a1 = Math.sin(dLat/2)**2 + Math.cos(myPos.lat*Math.PI/180)*Math.cos(destPos.lat*Math.PI/180)*Math.sin(dLng/2)**2;
       const dist = R * 2 * Math.asin(Math.sqrt(a1));
       routeKm = dist * 1.3;
+      routeMinutos = (routeKm / 30) * 60; // estimación: 30 km/h media urbana
       document.getElementById('route-card').style.display = 'block';
       document.getElementById('route-km').textContent = routeKm.toFixed(1) + ' km (estimado)';
       document.getElementById('route-time').textContent = '—';
@@ -726,26 +749,49 @@ function esHorarioDiurno() {
 }
 
 function aplicarTarifaAutomatica() {
-  const tipo = detectarOrigen();
-  let tarifaSeleccionada = 't1';
+  if (!myPos || !destPos) return;
 
-  if (tipo === 'aeropuerto') {
-    // Si destino dentro de M30 (distancia <= 8 km del centro) -> T4, sino T3
-    const dentroM30 = destPos && distanciaKm(destPos, CENTRO_M30) <= 8;
-    tarifaSeleccionada = dentroM30 ? 't4' : 't3';
-  } else if (tipo === 'estacion') {
-    tarifaSeleccionada = 't7';
-  } else {
-    tarifaSeleccionada = esHorarioDiurno() ? 't1' : 't2';
+  const origen = myPos;
+  const destino = destPos;
+  const nombreOrigen = origName || '';
+  const nombreDestino = destName || '';
+
+  // ── Aeropuerto ─────────────────────────────────────────────────
+  const origenAeropuerto  = esAeropuerto(origen,  nombreOrigen);
+  const destinoAeropuerto = esAeropuerto(destino, nombreDestino);
+
+  if (origenAeropuerto || destinoAeropuerto) {
+    const otroPunto = origenAeropuerto ? destino : origen;
+
+    // T4: origen O destino = aeropuerto + el otro punto dentro M-30
+    if (dentroDeLaM30(otroPunto)) {
+      activarChip('t4');
+      return;
+    }
+
+    // T3: solo cuando ORIGEN = aeropuerto + destino fuera M-30
+    if (origenAeropuerto) {
+      activarChip('t3');
+      return;
+    }
+
+    // Destino = aeropuerto + origen fuera M-30 → tarifa ciudad normal
   }
 
-  // Activar el chip correspondiente
+  // ── Estación (origen O destino) ────────────────────────────────
+  if (esEstacion(origen, nombreOrigen) || esEstacion(destino, nombreDestino)) {
+    activarChip('t7');
+    return;
+  }
+
+  // ── Ciudad: día o noche ────────────────────────────────────────
+  activarChip(esHorarioDiurno() ? 't1' : 't2');
+}
+
+function activarChip(key) {
   document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-  const chip = document.querySelector(`.chip[data-key="${tarifaSeleccionada}"]`);
-  if (chip) {
-    chip.classList.add('active');
-    tarifaKey = tarifaSeleccionada;
-  }
+  const chip = document.querySelector(`.chip[data-key="${key}"]`);
+  if (chip) { chip.classList.add('active'); tarifaKey = key; }
 }
 
 function setTarifa(key, el) {
@@ -758,11 +804,14 @@ function setTarifa(key, el) {
 function calcPrice() {
   if (!routeKm) return;
   const t = TARIFAS[tarifaKey];
+  const mins = routeMinutos || 0;
   let precio = 0;
 
   if (t.tipo === 'fijo') {
     precio = t.precio_fijo;
+
   } else if (t.tipo === 'minimo_luego_metro') {
+    // T3: Aeropuerto → fuera M30. Mínimo 22€ cubre 9 km, luego se cobra por km
     const esDiurno = esHorarioDiurno();
     const kmTarifa = esDiurno ? t.km_t1 : t.km_t2;
     if (routeKm <= t.franquicia_km) {
@@ -770,15 +819,19 @@ function calcPrice() {
     } else {
       precio = t.minimo + (routeKm - t.franquicia_km) * kmTarifa;
     }
+
   } else if (t.tipo === 'salida_especial') {
+    // T7: Estaciones/IFEMA. Salida especial 8€ cubre 1,45 km, luego por km
     const esDiurno = esHorarioDiurno();
     const kmTarifa = esDiurno ? t.km : t.km_noche;
     const franquiciaKm = t.franquicia_m / 1000;
     const kmExtra = Math.max(0, routeKm - franquiciaKm);
     precio = t.salida + kmExtra * kmTarifa;
+
   } else {
-    precio = t.bandera + routeKm * t.km;
-    precio = Math.max(precio, t.min);
+    // T1 / T2: bandera + km + tiempo, mínimo de carrera
+    precio = t.bandera + (routeKm * t.km) + (mins * t.minuto);
+    precio = Math.max(precio, t.min_carrera);
   }
 
   document.getElementById('price-card').style.display = 'block';
