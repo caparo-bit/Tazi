@@ -1,27 +1,25 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="format-detection" content="telephone=no" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="application-name" content="Tazi Conductores" />
-  <meta name="theme-color" content="#0f1117" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Tazi Conductores" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Tazi · Conductores</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: 'Inter', sans-serif; background: #0f1117; color: #e8e8f0; height: 100vh; overflow: hidden; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0f1117;
+      color: #e8e8f0;
+      height: 100vh;
+      overflow: hidden;
+    }
 
-    /* ── Pantalla de autenticación ── */
-    #auth-screen {
+    /* ── Login ── */
+    #login-screen {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -30,116 +28,92 @@
       padding: 1.5rem;
       background: #0f1117;
     }
-    #auth-screen h1 {
+    #login-screen h1 {
       font-size: 2rem;
       color: #3ecf8e;
       margin-bottom: 1rem;
     }
-    #auth-screen .tabs {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-    }
-    #auth-screen .tabs button {
-      background: transparent;
-      border: none;
-      color: #6b7280;
-      font-weight: 600;
-      font-size: 1rem;
-      padding: 0.5rem 1rem;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      transition: 0.2s;
-    }
-    #auth-screen .tabs button.active {
-      color: #3ecf8e;
-      border-bottom-color: #3ecf8e;
-    }
-    #auth-screen .form {
-      display: none;
-      flex-direction: column;
-      gap: 0.8rem;
-      width: 100%;
-      max-width: 320px;
-    }
-    #auth-screen .form.active {
-      display: flex;
-    }
-    #auth-screen input {
+    #login-screen input {
       padding: 0.8rem 1rem;
       border-radius: 10px;
       border: 1px solid #2a2a45;
       background: rgba(255,255,255,0.05);
       color: white;
+      width: 280px;
       font-size: 1rem;
-      width: 100%;
+      margin-bottom: 0.8rem;
     }
-    #auth-screen input::placeholder { color: #6b7280; }
-    #auth-screen .btn-primary {
-      padding: 0.8rem;
+    #login-screen button {
+      padding: 0.8rem 2rem;
       border-radius: 10px;
       background: #3ecf8e;
       color: #0f1117;
       font-weight: 700;
       border: none;
       cursor: pointer;
+      width: 280px;
       font-size: 1rem;
-      transition: 0.2s;
     }
-    #auth-screen .btn-primary:hover { opacity: 0.85; }
-    #auth-screen .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    #auth-screen .error-msg {
-      color: #f87171;
-      font-size: 0.85rem;
-      margin-top: 0.3rem;
-      text-align: center;
-    }
-    #auth-screen .success-msg {
-      color: #34d399;
-      font-size: 0.85rem;
-      margin-top: 0.3rem;
-      text-align: center;
-    }
+    #login-screen .error { color: #f87171; font-size: 0.9rem; margin-top: 0.5rem; }
 
     /* ── App principal ── */
-    #app-conductor {
+    #app-main {
       display: none;
       flex-direction: column;
       height: 100vh;
-    }
-    #map { height: 50vh; width: 100%; }
-    #lista-solicitudes {
-      flex: 1;
-      overflow-y: auto;
-      padding: 1rem;
       background: #1a1a2e;
     }
-    .solicitud-item {
-      background: #2a2a45;
-      border-radius: 12px;
-      padding: 0.8rem 1rem;
-      margin-bottom: 0.6rem;
-      border: 1px solid #3a3a5a;
+    #map { height: 45vh; width: 100%; background: #0f1117; }
+    #solicitudes-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.8rem 1rem 1rem;
+      background: #1a1a2e;
     }
-    .solicitud-item .info {
+    .solicitud-card {
+      background: #2a2a45;
+      border-radius: 14px;
+      padding: 0.8rem 1rem;
+      margin-bottom: 0.8rem;
+      border: 1px solid #3a3a5a;
+      transition: background 0.2s;
+    }
+    .solicitud-card:hover { background: #2f2f4f; }
+    .solicitud-card .info {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
+      align-items: center;
+      gap: 0.4rem 0.8rem;
       font-size: 0.9rem;
     }
-    .solicitud-item .precio { color: #fbbc04; font-weight: 700; }
-    .solicitud-item .distancia { color: #34a853; }
-    .solicitud-item button {
+    .solicitud-card .origen-destino { flex: 1; font-weight: 500; }
+    .solicitud-card .precio { color: #fbbc04; font-weight: 700; }
+    .solicitud-card .distancia { color: #34a853; font-size: 0.85rem; }
+    .solicitud-card .tiempo { color: #9aa0a6; font-size: 0.8rem; }
+    .solicitud-card .acciones { margin-top: 0.5rem; display: flex; gap: 0.5rem; }
+    .solicitud-card .acciones button {
       background: #34a853;
       color: white;
       border: none;
       border-radius: 8px;
-      padding: 0.4rem 1rem;
-      cursor: pointer;
+      padding: 0.3rem 1rem;
       font-weight: 600;
-      margin-top: 0.4rem;
+      cursor: pointer;
+      transition: background 0.2s;
     }
-    .solicitud-item button:hover { background: #2d9248; }
+    .solicitud-card .acciones button:hover { background: #2d9248; }
+    .solicitud-card .acciones button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .solicitud-card .badge {
+      display: inline-block;
+      background: #fbbc04;
+      color: #0f1117;
+      font-size: 0.7rem;
+      padding: 0.1rem 0.6rem;
+      border-radius: 12px;
+      font-weight: 600;
+      margin-left: 0.3rem;
+    }
+
     #btn-logout {
       position: fixed;
       top: 10px;
@@ -151,367 +125,360 @@
       padding: 0.3rem 0.8rem;
       border-radius: 20px;
       cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8rem;
     }
+    #btn-logout:hover { background: rgba(255,0,0,0.2); border-color: #f87171; }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: #6b7280;
+      font-size: 0.95rem;
+    }
+    .empty-state .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+
+    /* Leaflet ajustes */
     .leaflet-popup-content-wrapper { border-radius: 12px; background: #1a1a2e; color: white; }
     .leaflet-popup-tip { background: #1a1a2e; }
     .leaflet-control-zoom a { color: white !important; background: #2a2a45 !important; }
+
+    /* Scroll */
+    #solicitudes-container::-webkit-scrollbar { width: 4px; }
+    #solicitudes-container::-webkit-scrollbar-track { background: transparent; }
+    #solicitudes-container::-webkit-scrollbar-thumb { background: #3a3a5a; border-radius: 4px; }
   </style>
 </head>
 <body>
 
-  <!-- ═══ Pantalla de autenticación ═══ -->
-  <div id="auth-screen">
-    <h1>🚖 Conductores</h1>
-    <div class="tabs">
-      <button id="tab-login" class="active" onclick="mostrarForm('login')">Iniciar sesión</button>
-      <button id="tab-register" onclick="mostrarForm('register')">Registrarse</button>
-    </div>
+<!-- ═══ Pantalla de Login ═══ -->
+<div id="login-screen">
+  <h1>🚖 Conductores</h1>
+  <input id="login-email" type="email" placeholder="Email" />
+  <input id="login-password" type="password" placeholder="Contraseña" />
+  <button onclick="loginConductor()">Iniciar sesión</button>
+  <div id="login-error" class="error"></div>
+  <div style="margin-top:1rem; font-size:0.8rem; color:#6b7280;">
+    ¿No eres conductor? <a href="/Tazi/" style="color:#3ecf8e;">Ir a app de usuarios</a>
+  </div>
+</div>
 
-    <!-- Formulario de login -->
-    <div id="form-login" class="form active">
-      <input id="login-email" type="email" placeholder="Email" />
-      <input id="login-password" type="password" placeholder="Contraseña" />
-      <button class="btn-primary" onclick="loginConductor()">Iniciar sesión</button>
-      <div id="login-error" class="error-msg"></div>
-    </div>
-
-    <!-- Formulario de registro -->
-    <div id="form-register" class="form">
-      <input id="reg-nombre" type="text" placeholder="Nombre completo" />
-      <input id="reg-email" type="email" placeholder="Email" />
-      <input id="reg-telefono" type="tel" placeholder="Teléfono" />
-      <input id="reg-vehiculo" type="text" placeholder="Vehículo (ej. Toyota Prius)" />
-      <input id="reg-password" type="password" placeholder="Contraseña (mínimo 6 caracteres)" />
-      <button class="btn-primary" onclick="registerConductor()">Registrarse</button>
-      <div id="register-error" class="error-msg"></div>
-      <div id="register-success" class="success-msg"></div>
+<!-- ═══ App principal ═══ -->
+<div id="app-main">
+  <div id="map"></div>
+  <div id="solicitudes-container">
+    <!-- Las solicitudes se renderizan aquí -->
+    <div class="empty-state" id="empty-state">
+      <div class="icon">🚗</div>
+      No hay solicitudes pendientes<br/>
+      <span style="font-size:0.8rem;">Espera a que un cliente solicite un taxi</span>
     </div>
   </div>
+  <button id="btn-logout" onclick="logout()">✕ Salir</button>
+</div>
 
-  <!-- ═══ App principal ═══ -->
-  <div id="app-conductor">
-    <div id="map"></div>
-    <div id="lista-solicitudes">
-      <div style="text-align:center; padding: 2rem; color: #6b7280;">Cargando solicitudes...</div>
-    </div>
-    <button id="btn-logout" onclick="logout()">✕ Salir</button>
-  </div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// CONFIGURACIÓN SUPABASE
+// ═══════════════════════════════════════════════════════════════════
+const SB_URL = 'https://ejbvfirfodfktekgpwkm.supabase.co';
+const SB_KEY = 'sb_publishable_ZNwpPu1uqxZfKWOU6FDgbQ_0sLhGrXt';
+const sb = supabase.createClient(SB_URL, SB_KEY);
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    // ═══════════════════════════════════════════
-    // CONFIGURACIÓN SUPABASE
-    // ═══════════════════════════════════════════
-    const SB_URL = 'https://ejbvfirfodfktekgpwkm.supabase.co';
-    const SB_KEY = 'sb_publishable_ZNwpPu1uqxZfKWOU6FDgbQ_0sLhGrXt';
-    const sb = supabase.createClient(SB_URL, SB_KEY);
+let currentUser = null;
+let map = null;
+let myMarker = null;
+let conductorPos = null;
+let watchId = null;
+let channel = null;
+let solicitudesCache = [];
 
-    let currentUser = null;
-    let map, myMarker;
-    let conductorPos = null;
-    let channel = null;
-    let watchId = null;
+// ── Elementos DOM ──
+const loginScreen = document.getElementById('login-screen');
+const appMain = document.getElementById('app-main');
+const loginError = document.getElementById('login-error');
+const container = document.getElementById('solicitudes-container');
+const emptyState = document.getElementById('empty-state');
 
-    // ═══════════════════════════════════════════
-    // UI: TABS
-    // ═══════════════════════════════════════════
-    function mostrarForm(tipo) {
-      document.getElementById('form-login').classList.toggle('active', tipo === 'login');
-      document.getElementById('form-register').classList.toggle('active', tipo === 'register');
-      document.getElementById('tab-login').classList.toggle('active', tipo === 'login');
-      document.getElementById('tab-register').classList.toggle('active', tipo === 'register');
-      // Limpiar mensajes
-      document.getElementById('login-error').textContent = '';
-      document.getElementById('register-error').textContent = '';
-      document.getElementById('register-success').textContent = '';
+// ═══════════════════════════════════════════════════════════════════
+// LOGIN
+// ═══════════════════════════════════════════════════════════════════
+async function loginConductor() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  loginError.textContent = '';
+
+  if (!email || !password) {
+    loginError.textContent = 'Completa todos los campos.';
+    return;
+  }
+
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
+
+    // Verificar rol conductor
+    const { data: perfil, error: perfilError } = await sb
+      .from('perfiles')
+      .select('rol')
+      .eq('id', data.user.id)
+      .single();
+
+    if (perfilError || perfil.rol !== 'conductor') {
+      await sb.auth.signOut();
+      throw new Error('No tienes permisos de conductor.');
     }
 
-    // ═══════════════════════════════════════════
-    // REGISTRO DE CONDUCTOR
-    // ═══════════════════════════════════════════
-    async function registerConductor() {
-      const nombre = document.getElementById('reg-nombre').value.trim();
-      const email = document.getElementById('reg-email').value.trim();
-      const telefono = document.getElementById('reg-telefono').value.trim();
-      const vehiculo = document.getElementById('reg-vehiculo').value.trim();
-      const password = document.getElementById('reg-password').value;
-      const errorDiv = document.getElementById('register-error');
-      const successDiv = document.getElementById('register-success');
-      const btn = document.querySelector('#form-register .btn-primary');
+    currentUser = data.user;
+    iniciarApp();
 
-      // Limpiar mensajes
-      errorDiv.textContent = '';
-      successDiv.textContent = '';
+  } catch (err) {
+    loginError.textContent = '❌ ' + err.message;
+  }
+}
 
-      // Validaciones básicas
-      if (!nombre || !email || !telefono || !vehiculo || !password) {
-        errorDiv.textContent = 'Todos los campos son obligatorios.';
-        return;
-      }
-      if (password.length < 6) {
-        errorDiv.textContent = 'La contraseña debe tener al menos 6 caracteres.';
-        return;
-      }
+// ═══════════════════════════════════════════════════════════════════
+// INICIAR APP
+// ═══════════════════════════════════════════════════════════════════
+function iniciarApp() {
+  loginScreen.style.display = 'none';
+  appMain.style.display = 'flex';
+  initMap();
+  startGPS();
+  cargarSolicitudes();
+  suscribirSolicitudes();
+}
 
-      btn.disabled = true;
-      btn.textContent = 'Registrando...';
+// ═══════════════════════════════════════════════════════════════════
+// MAPA
+// ═══════════════════════════════════════════════════════════════════
+function initMap() {
+  if (map) return;
+  map = L.map('map').setView([40.4168, -3.7038], 13);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '© OSM, © CARTO',
+    maxZoom: 19,
+    subdomains: 'abcd'
+  }).addTo(map);
+}
 
-      try {
-        // 1. Crear usuario en Supabase Auth
-        const { data: authData, error: authError } = await sb.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { nombre, telefono, vehiculo } // datos extra (opcional)
-          }
+// ── GPS ──
+function startGPS() {
+  if (!navigator.geolocation) return;
+  watchId = navigator.geolocation.watchPosition(
+    pos => {
+      const { latitude, longitude } = pos.coords;
+      conductorPos = { lat: latitude, lng: longitude };
+      const ll = [latitude, longitude];
+      if (!myMarker) {
+        const icon = L.divIcon({
+          html: '<div style="background:#4285f4;width:16px;height:16px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 4px rgba(66,133,244,0.3);"></div>',
+          iconSize: [16,16],
+          iconAnchor: [8,8]
         });
+        myMarker = L.marker(ll, { icon }).addTo(map);
+      } else {
+        myMarker.setLatLng(ll);
+      }
+      map.setView(ll, 14);
+      cargarSolicitudes(); // refrescar al mover
+    },
+    err => console.warn('GPS error', err),
+    { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+  );
+}
 
-        if (authError) throw new Error(authError.message);
+// ═══════════════════════════════════════════════════════════════════
+// SOLICITUDES
+// ═══════════════════════════════════════════════════════════════════
+function distanciaKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.asin(Math.sqrt(a));
+}
 
-        if (!authData.user) {
-          throw new Error('No se pudo crear el usuario. Intenta de nuevo.');
+async function cargarSolicitudes() {
+  if (!conductorPos) return;
+
+  try {
+    const { data, error } = await sb
+      .from('solicitudes')
+      .select('*')
+      .eq('estado', 'pendiente')
+      .is('conductor_id', null)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    solicitudesCache = data || [];
+    renderizarSolicitudes(solicitudesCache);
+  } catch (err) {
+    console.error('Error cargando solicitudes:', err);
+    container.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div>Error al cargar solicitudes<br/><span style="font-size:0.8rem;">${err.message}</span></div>`;
+  }
+}
+
+function renderizarSolicitudes(lista) {
+  if (!lista || lista.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" id="empty-state">
+        <div class="icon">🚗</div>
+        No hay solicitudes pendientes<br/>
+        <span style="font-size:0.8rem;">Espera a que un cliente solicite un taxi</span>
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+  lista.forEach(s => {
+    const dist = distanciaKm(conductorPos.lat, conductorPos.lng, s.origen_lat, s.origen_lng);
+    const tiempo = Math.round((dist / 30) * 60); // 30 km/h aprox
+
+    html += `
+      <div class="solicitud-card" data-id="${s.id}">
+        <div class="info">
+          <span class="origen-destino">
+            <strong>${s.origen_nombre || 'Origen'}</strong> → ${s.destino_nombre || 'Destino'}
+          </span>
+          <span class="precio">💰 ${s.precio.toFixed(2)} €</span>
+          <span class="distancia">📏 ${s.distancia_km.toFixed(1)} km</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.3rem;">
+          <span class="tiempo">🚗 ${dist.toFixed(1)} km de ti · ⏱ ~${tiempo} min</span>
+          <span class="badge">${s.tarifa_key.toUpperCase()}</span>
+        </div>
+        <div class="acciones">
+          <button onclick="aceptarSolicitud('${s.id}')">✅ Aceptar</button>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+
+  // Mostrar marcadores en el mapa
+  // Limpiar marcadores anteriores (opcional)
+  if (window.solicitudMarkers) {
+    window.solicitudMarkers.forEach(m => map.removeLayer(m));
+  }
+  window.solicitudMarkers = [];
+  lista.forEach(s => {
+    const marker = L.marker([s.origen_lat, s.origen_lng])
+      .addTo(map)
+      .bindPopup(`
+        <b>${s.origen_nombre || 'Origen'}</b><br/>
+        Destino: ${s.destino_nombre || 'Destino'}<br/>
+        Precio: ${s.precio.toFixed(2)} €
+      `);
+    window.solicitudMarkers.push(marker);
+  });
+}
+
+// ── Aceptar solicitud ──
+async function aceptarSolicitud(id) {
+  if (!currentUser) return;
+  if (!confirm('¿Aceptar esta solicitud?')) return;
+
+  try {
+    const { error } = await sb
+      .from('solicitudes')
+      .update({
+        estado: 'aceptado',
+        conductor_id: currentUser.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+    toast('Solicitud aceptada 🎉');
+    cargarSolicitudes(); // refrescar
+  } catch (err) {
+    alert('Error al aceptar: ' + err.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SUSCRIPCIÓN EN TIEMPO REAL
+// ═══════════════════════════════════════════════════════════════════
+function suscribirSolicitudes() {
+  if (channel) {
+    sb.removeChannel(channel);
+  }
+  channel = sb.channel('solicitudes-pendientes');
+  channel.on(
+    'postgres_changes',
+    {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'solicitudes',
+      filter: 'estado=eq.pendiente'
+    },
+    (payload) => {
+      console.log('Nueva solicitud:', payload.new);
+      cargarSolicitudes(); // refrescar lista
+    }
+  ).subscribe((status) => {
+    console.log('Suscripción a solicitudes:', status);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TOAST (notificaciones)
+// ═══════════════════════════════════════════════════════════════════
+function toast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = `
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    background: #1a1a2e; border: 1px solid #2a2a45;
+    border-radius: 40px; padding: 10px 24px;
+    color: #34d399; font-weight: 500; z-index: 9999;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    transition: opacity 0.3s; opacity: 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+  `;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.style.opacity = '1');
+  setTimeout(() => {
+    t.style.opacity = '0';
+    setTimeout(() => t.remove(), 500);
+  }, 2500);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// LOGOUT
+// ═══════════════════════════════════════════════════════════════════
+function logout() {
+  if (watchId) navigator.geolocation.clearWatch(watchId);
+  if (channel) sb.removeChannel(channel);
+  sb.auth.signOut();
+  currentUser = null;
+  appMain.style.display = 'none';
+  loginScreen.style.display = 'flex';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-password').value = '';
+  loginError.textContent = '';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// AUTO-LOGIN (si hay sesión activa)
+// ═══════════════════════════════════════════════════════════════════
+sb.auth.getSession().then(({ data: { session } }) => {
+  if (session?.user) {
+    sb.from('perfiles').select('rol').eq('id', session.user.id).single()
+      .then(({ data }) => {
+        if (data?.rol === 'conductor') {
+          currentUser = session.user;
+          iniciarApp();
         }
-
-        // 2. Esperar un momento para que el trigger cree el perfil (por defecto 'usuario')
-        //    y luego actualizar el rol a 'conductor' con los datos adicionales
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const { error: updateError } = await sb
-          .from('perfiles')
-          .update({
-            rol: 'conductor',
-            nombre: nombre,
-            telefono: telefono,
-            vehiculo: vehiculo
-          })
-          .eq('id', authData.user.id);
-
-        if (updateError) throw new Error(updateError.message);
-
-        // Éxito
-        successDiv.textContent = '✅ Conductor registrado correctamente. Ahora inicia sesión.';
-        // Limpiar campos
-        document.getElementById('reg-nombre').value = '';
-        document.getElementById('reg-email').value = '';
-        document.getElementById('reg-telefono').value = '';
-        document.getElementById('reg-vehiculo').value = '';
-        document.getElementById('reg-password').value = '';
-        // Cambiar a login
-        setTimeout(() => mostrarForm('login'), 1500);
-
-      } catch (err) {
-        errorDiv.textContent = '❌ ' + err.message;
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Registrarse';
-      }
-    }
-
-    // ═══════════════════════════════════════════
-    // LOGIN DE CONDUCTOR
-    // ═══════════════════════════════════════════
-    async function loginConductor() {
-      const email = document.getElementById('login-email').value.trim();
-      const password = document.getElementById('login-password').value;
-      const errorDiv = document.getElementById('login-error');
-      errorDiv.textContent = '';
-
-      if (!email || !password) {
-        errorDiv.textContent = 'Completa todos los campos.';
-        return;
-      }
-
-      try {
-        const { data, error } = await sb.auth.signInWithPassword({ email, password });
-        if (error) throw new Error(error.message);
-
-        // Verificar rol
-        const { data: perfil, error: perfilError } = await sb
-          .from('perfiles')
-          .select('rol')
-          .eq('id', data.user.id)
-          .single();
-
-        if (perfilError || perfil.rol !== 'conductor') {
-          await sb.auth.signOut();
-          throw new Error('No tienes permisos de conductor.');
-        }
-
-        currentUser = data.user;
-        document.getElementById('auth-screen').style.display = 'none';
-        document.getElementById('app-conductor').style.display = 'flex';
-        iniciarMapa();
-        iniciarGPS();
-        cargarSolicitudes();
-        suscribirSolicitudes();
-
-      } catch (err) {
-        errorDiv.textContent = '❌ ' + err.message;
-      }
-    }
-
-    // ═══════════════════════════════════════════
-    // LOGOUT
-    // ═══════════════════════════════════════════
-    function logout() {
-      if (watchId) navigator.geolocation.clearWatch(watchId);
-      if (channel) sb.removeChannel(channel);
-      sb.auth.signOut();
-      currentUser = null;
-      document.getElementById('auth-screen').style.display = 'flex';
-      document.getElementById('app-conductor').style.display = 'none';
-    }
-
-    // ═══════════════════════════════════════════
-    // MAPA Y GPS
-    // ═══════════════════════════════════════════
-    function iniciarMapa() {
-      if (map) return;
-      map = L.map('map').setView([40.4168, -3.7038], 13);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '© OSM, © CARTO',
-        maxZoom: 19,
-        subdomains: 'abcd'
-      }).addTo(map);
-    }
-
-    function iniciarGPS() {
-      if (!navigator.geolocation) return;
-      watchId = navigator.geolocation.watchPosition(
-        pos => {
-          const { latitude, longitude } = pos.coords;
-          conductorPos = { lat: latitude, lng: longitude };
-          const ll = [latitude, longitude];
-          if (!myMarker) {
-            const icon = L.divIcon({ html: '<div style="background:#4285f4;width:16px;height:16px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 4px rgba(66,133,244,0.3);"></div>', iconSize: [16,16], iconAnchor: [8,8] });
-            myMarker = L.marker(ll, { icon }).addTo(map);
-          } else {
-            myMarker.setLatLng(ll);
-          }
-          map.setView(ll, 14);
-          cargarSolicitudes();
-        },
-        err => console.warn('GPS error', err),
-        { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
-      );
-    }
-
-    // ═══════════════════════════════════════════
-    // SOLICITUDES
-    // ═══════════════════════════════════════════
-    function distanciaKm(lat1, lng1, lat2, lng2) {
-      const R = 6371;
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLng = (lng2 - lng1) * Math.PI / 180;
-      const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-      return R * 2 * Math.asin(Math.sqrt(a));
-    }
-
-    function cargarSolicitudes() {
-      if (!conductorPos) return;
-      sb.from('solicitudes')
-        .select('*')
-        .eq('estado', 'pendiente')
-        .is('conductor_id', null)
-        .order('created_at', { ascending: false })
-        .then(({ data, error }) => {
-          if (error) throw error;
-          renderizarSolicitudes(data);
-        })
-        .catch(err => console.warn('Error cargando solicitudes:', err));
-    }
-
-    function renderizarSolicitudes(lista) {
-      const container = document.getElementById('lista-solicitudes');
-      if (!lista.length) {
-        container.innerHTML = '<div style="text-align:center;padding:2rem;color:#6b7280;">No hay solicitudes pendientes</div>';
-        return;
-      }
-
-      container.innerHTML = lista.map(s => {
-        const dist = distanciaKm(conductorPos.lat, conductorPos.lng, s.origen_lat, s.origen_lng);
-        const tiempo = Math.round((dist / 30) * 60);
-        return `
-          <div class="solicitud-item" data-id="${s.id}">
-            <div class="info">
-              <span><strong>${s.origen_nombre || 'Origen'}</strong> → ${s.destino_nombre || 'Destino'}</span>
-              <span class="precio">💰 ${s.precio} €</span>
-              <span class="distancia">📏 ${s.distancia_km} km</span>
-            </div>
-            <div style="font-size:0.8rem;color:#9aa0a6;">🚗 ${dist.toFixed(1)} km de ti · ⏱ ~${tiempo} min</div>
-            <button onclick="aceptarSolicitud('${s.id}')">✅ Aceptar</button>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function aceptarSolicitud(id) {
-      if (!currentUser) return;
-      if (!confirm('¿Aceptar esta solicitud?')) return;
-
-      sb.from('solicitudes')
-        .update({ estado: 'aceptado', conductor_id: currentUser.id })
-        .eq('id', id)
-        .then(({ error }) => {
-          if (error) {
-            alert('Error al aceptar: ' + error.message);
-          } else {
-            toast('Solicitud aceptada 🎉');
-            cargarSolicitudes();
-          }
-        });
-    }
-
-    // ═══════════════════════════════════════════
-    // SUSCRIPCIÓN EN TIEMPO REAL
-    // ═══════════════════════════════════════════
-    function suscribirSolicitudes() {
-      if (channel) sb.removeChannel(channel);
-      channel = sb.channel('solicitudes-pendientes');
-      channel.on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'solicitudes',
-          filter: 'estado=eq.pendiente'
-        },
-        () => cargarSolicitudes()
-      ).subscribe();
-    }
-
-    // ═══════════════════════════════════════════
-    // TOAST
-    // ═══════════════════════════════════════════
-    function toast(msg) {
-      const t = document.createElement('div');
-      t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1a1a2e;border:1px solid #2a2a45;border-radius:40px;padding:10px 24px;color:#34d399;font-weight:500;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.6);transition:opacity 0.3s;opacity:0;';
-      t.textContent = msg;
-      document.body.appendChild(t);
-      requestAnimationFrame(() => t.style.opacity = '1');
-      setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 2500);
-    }
-
-    // ═══════════════════════════════════════════
-    // SESIÓN ACTIVA (auto-login)
-    // ═══════════════════════════════════════════
-    sb.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        sb.from('perfiles').select('rol').eq('id', session.user.id).single()
-          .then(({ data }) => {
-            if (data?.rol === 'conductor') {
-              currentUser = session.user;
-              document.getElementById('auth-screen').style.display = 'none';
-              document.getElementById('app-conductor').style.display = 'flex';
-              iniciarMapa();
-              iniciarGPS();
-              cargarSolicitudes();
-              suscribirSolicitudes();
-            }
-          });
-      }
-    });
-  </script>
+      });
+  }
+});
+</script>
 </body>
 </html>
