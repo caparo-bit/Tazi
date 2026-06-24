@@ -17,97 +17,39 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
-    /* ───────────── RESET + BASE ───────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    html { height: 100%; height: -webkit-fill-available; }
-    body {
-      height: 100%; height: -webkit-fill-available;
-      font-family: 'Inter', sans-serif;
-      overflow: hidden; overscroll-behavior: none; touch-action: manipulation;
-      background: #0f1117;
-    }
-    :root {
-      --blue: #1a73e8; --blue2: #4285f4; --red: #ea4335; --green: #34a853;
-      --text: #202124; --muted: #5f6368; --border: #e0e0e0; --bg: #f5f5f5;
-      --sh: 0 1px 4px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.1);
-      --sh2: 0 2px 8px rgba(0,0,0,.25), 0 8px 28px rgba(0,0,0,.15);
-      --auth-bg: #0f1117; --auth-s: #1a1a2e; --auth-b: #2a2a45;
-      --teal: #3ecf8e; --teal-d: rgba(62,207,142,.12); --err: #f87171; --muted2: #6b7280;
-      --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px);
-    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Inter', sans-serif; background: #0f1117; color: #e8e8f0; height: 100vh; overflow: hidden; }
 
-    /* ───────────── AUTH ───────────── */
-    #screen-auth {
-      min-height: 100vh; min-height: -webkit-fill-available;
-      display: flex; align-items: center; justify-content: center;
-      padding: calc(1.5rem + var(--sat)) 1.5rem calc(1.5rem + var(--sab));
-      background: var(--auth-bg); position: relative; overflow: hidden;
+    #auth-screen {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 100vh; padding: 1.5rem; background: #0f1117;
     }
-    #screen-auth::before {
-      content: ''; position: fixed; top: -180px; left: 50%; transform: translateX(-50%);
-      width: 600px; height: 600px;
-      background: radial-gradient(circle, rgba(62,207,142,.15) 0%, transparent 70%);
-      pointer-events: none; animation: aupulse 4s ease-in-out infinite;
+    #auth-screen .card {
+      background: #1a1a2e; border: 1px solid #2a2a45; border-radius: 16px;
+      padding: 2rem; width: 100%; max-width: 380px;
     }
-    @keyframes aupulse { 0%,100%{opacity:.6;transform:translateX(-50%) scale(1)} 50%{opacity:1;transform:translateX(-50%) scale(1.06)} }
+    #auth-screen h1 { font-size: 1.8rem; color: #3ecf8e; margin-bottom: 0.5rem; }
+    #auth-screen .subtitle { color: #6b7280; margin-bottom: 1.5rem; }
+    #auth-screen input {
+      width: 100%; padding: 0.7rem 1rem; border-radius: 8px;
+      border: 1px solid #2a2a45; background: rgba(255,255,255,0.05);
+      color: #e8e8f0; font-size: 1rem; margin-bottom: 0.8rem;
+    }
+    #auth-screen .btn {
+      width: 100%; padding: 0.8rem; border: none; border-radius: 8px;
+      background: #3ecf8e; color: #0f1117; font-weight: 700; font-size: 1rem;
+      cursor: pointer; transition: 0.2s; margin-top: 0.3rem;
+    }
+    #auth-screen .btn:hover { opacity: 0.85; }
+    #auth-screen .btn-demo { background: #4a4a6a; color: #fff; margin-top: 0.8rem; }
+    #auth-screen .btn-demo:hover { background: #5a5a7a; }
+    #auth-screen .error { color: #f87171; font-size: 0.9rem; margin-top: 0.5rem; }
 
-    .card {
-      position: relative; background: var(--auth-s); border: 1px solid var(--auth-b);
-      border-radius: 16px; padding: 2.5rem 2.25rem; width: 100%; max-width: 400px;
-      box-shadow: 0 0 0 1px rgba(62,207,142,.05), 0 24px 60px rgba(0,0,0,.6);
+    #map-screen {
+      display: none; flex-direction: column; height: 100vh; background: #f5f5f5;
     }
-    .brand { display: flex; align-items: center; gap: .6rem; margin-bottom: 2rem; }
-    .brand-icon { width: 38px; height: 38px; background: var(--teal-d); border: 1px solid rgba(62,207,142,.3); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
-    .brand-icon svg { width: 20px; height: 20px; }
-    .brand-name { font-size: 1.1rem; font-weight: 700; color: #e8e8f0; }
-    h1 { font-size: 1.4rem; font-weight: 600; color: #e8e8f0; margin-bottom: .3rem; }
-    .subtitle { font-size: .85rem; color: var(--muted2); margin-bottom: 2rem; }
-    label { display: block; font-size: .75rem; font-weight: 600; color: var(--muted2); margin-bottom: .35rem; text-transform: uppercase; letter-spacing: .04em; }
-    .field { margin-bottom: 1rem; }
-    input[type="email"], input[type="password"] {
-      width: 100%; background: rgba(255,255,255,.05); border: 1px solid var(--auth-b);
-      border-radius: 9px; color: #e8e8f0; font-family: inherit; font-size: 16px;
-      padding: .7rem .9rem; outline: none; transition: border-color .2s, box-shadow .2s;
-    }
-    input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(62,207,142,.12); }
-    input::placeholder { color: #3d3d5c; }
-
-    .btn {
-      display: block; width: 100%; padding: .75rem; margin-top: 1.25rem;
-      background: var(--teal); color: #0f1117; font-family: inherit; font-size: .9rem;
-      font-weight: 700; border: none; border-radius: 9px; cursor: pointer;
-      transition: opacity .2s, transform .1s; -webkit-appearance: none;
-    }
-    .btn:hover { opacity: .88; }
-    .btn:active { transform: scale(.98); }
-    .btn:disabled { opacity: .4; cursor: not-allowed; }
-    .btn-ghost { background: transparent; color: #e8e8f0; border: 1px solid var(--auth-b); margin-top: .6rem; }
-    .btn-ghost:hover { border-color: var(--teal); color: var(--teal); }
-    .btn-demo { background: #4a4a6a; color: #fff; margin-top: .6rem; }
-    .btn-demo:hover { background: #5a5a7a; }
-    .btn-install { background: var(--blue2); color: #fff; margin-top: .6rem; display: flex; align-items: center; justify-content: center; gap: .5rem; }
-    .btn-install:hover { background: #1557b0; }
-    .divider { display: flex; align-items: center; gap: .75rem; color: var(--muted2); font-size: .78rem; margin: 1rem 0; }
-    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--auth-b); }
-    .footer-link { text-align: center; font-size: .82rem; color: var(--muted2); margin-top: 1.25rem; }
-    .footer-link a { color: var(--teal); text-decoration: none; font-weight: 500; }
-    .amsg { font-size: .82rem; padding: .65rem .85rem; border-radius: 8px; margin-bottom: .75rem; display: none; }
-    .amsg.error { background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.25); color: var(--err); }
-    .amsg.success { background: var(--teal-d); border: 1px solid rgba(62,207,142,.25); color: var(--teal); }
-    .amsg.show { display: block; }
-    .sp { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(15,17,23,.3); border-top-color: #0f1117; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: 5px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .view { display: none; }
-    .view.active { display: block; }
-
-    /* ───────────── MAPA ───────────── */
-    #screen-map {
-      display: none; position: fixed; inset: 0; flex-direction: column;
-      background: var(--bg); padding-top: var(--sat);
-    }
-    #screen-map.active { display: flex; }
-
-    #map-wrap { position: relative; height: 55vh; min-height: 260px; flex-shrink: 0; }
+    #map-screen.active { display: flex; }
+    #map-wrap { position: relative; height: 50vh; min-height: 260px; }
     #map { width: 100%; height: 100%; }
 
     #search-bar {
@@ -115,302 +57,196 @@
       z-index: 500; width: calc(100% - 20px); max-width: 420px;
     }
     .sbox-wrap {
-      display: flex; flex-direction: column; background: white; border-radius: 18px;
-      box-shadow: var(--sh2); overflow: visible;
+      background: white; border-radius: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      overflow: hidden;
     }
     .sbox-row {
-      display: flex; align-items: center; padding: .45rem .75rem .45rem .9rem; gap: .55rem;
+      display: flex; align-items: center; padding: 0.4rem 0.8rem; gap: 0.5rem;
     }
     .sbox-row:first-child { border-bottom: 1px solid #f0f0f0; }
     .sbox-row input {
-      flex: 1; border: none; outline: none; font-family: inherit; font-size: 16px;
-      color: var(--text); background: transparent;
+      flex: 1; border: none; outline: none; font-size: 16px; padding: 0.3rem 0;
+      background: transparent;
     }
-    .sbox-row input::placeholder { color: #9aa0a6; }
-    .orig-dot { width: 10px; height: 10px; background: #34a853; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 0 2px #34a853; flex-shrink: 0; }
-    .dest-dot { width: 10px; height: 10px; background: var(--red); border-radius: 50%; flex-shrink: 0; }
-    .sbox-btn {
-      background: var(--blue); color: white; border: none; border-radius: 50%;
-      width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; font-size: .85rem;
+    .sbox-row .btn-search {
+      background: #1a73e8; color: white; border: none; border-radius: 50%;
+      width: 30px; height: 30px; cursor: pointer; font-size: 0.9rem;
     }
-    .sbox-btn:hover { background: #1557b0; }
-    .sbox-clear { background: none; border: none; cursor: pointer; color: var(--muted); font-size: .9rem; padding: 2px 4px; line-height: 1; }
+    .sbox-row .btn-clear { background: none; border: none; color: #999; font-size: 1.1rem; cursor: pointer; }
+
+    .orig-dot, .dest-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+    .orig-dot { background: #34a853; border: 2px solid white; box-shadow: 0 0 0 2px #34a853; }
+    .dest-dot { background: #ea4335; }
 
     #ac-list {
-      background: white; border-radius: 14px; margin-top: 6px; box-shadow: var(--sh2);
-      overflow: hidden; display: none; position: absolute; width: 100%; z-index: 10;
+      background: white; border-radius: 14px; margin-top: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: none;
+      position: absolute; width: 100%; z-index: 10;
     }
     .ac-item {
-      padding: .6rem 1rem; font-size: .84rem; color: var(--text); cursor: pointer;
-      border-bottom: 1px solid #f0f0f0; display: flex; align-items: flex-start; gap: .6rem;
+      padding: 0.5rem 1rem; cursor: pointer; border-bottom: 1px solid #f0f0f0;
     }
     .ac-item:last-child { border-bottom: none; }
-    .ac-item:hover, .ac-item:active { background: #f8f9fa; }
-    .ac-ic { color: var(--muted); font-size: .85rem; padding-top: 1px; flex-shrink: 0; }
-    .ac-name { font-weight: 500; line-height: 1.3; }
-    .ac-sub { font-size: .73rem; color: var(--muted); }
+    .ac-item:hover { background: #f8f9fa; }
 
     .map-fab {
-      position: absolute; right: 10px; z-index: 500; background: white; border: none;
-      border-radius: 50%; width: 38px; height: 38px; cursor: pointer; box-shadow: var(--sh);
-      display: flex; align-items: center; justify-content: center; font-size: 1rem;
-      transition: box-shadow .15s;
+      position: absolute; right: 10px; z-index: 500;
+      background: white; border: none; border-radius: 50%;
+      width: 38px; height: 38px; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+      cursor: pointer; font-size: 1rem;
     }
-    .map-fab:hover { box-shadow: var(--sh2); }
     #btn-center { bottom: 56px; }
     #btn-expand { bottom: 10px; }
 
     #btn-logout {
       position: absolute; top: 10px; right: 10px; z-index: 500;
-      background: rgba(255,255,255,.9); backdrop-filter: blur(6px);
-      border: 1px solid var(--border); border-radius: 20px;
-      padding: .3rem .75rem; font-family: inherit; font-size: .74rem;
-      color: var(--muted); cursor: pointer;
+      background: rgba(255,255,255,0.9); border: 1px solid #ddd;
+      border-radius: 20px; padding: 0.2rem 0.8rem;
+      font-size: 0.8rem; cursor: pointer;
     }
-    #btn-logout:hover { color: var(--red); border-color: var(--red); }
 
-    .my-dot {
-      width: 16px; height: 16px; background: var(--blue2); border: 2.5px solid white;
-      border-radius: 50%; box-shadow: 0 0 0 5px rgba(66,133,244,.2);
-      animation: glow 2s ease-in-out infinite;
-    }
-    @keyframes glow { 0%,100%{box-shadow:0 0 0 5px rgba(66,133,244,.2)} 50%{box-shadow:0 0 0 12px rgba(66,133,244,.0)} }
-
-    #map-wrap.fullscreen { position: fixed; inset: 0; height: 100vh; z-index: 2000; padding-top: 0; }
-    #map-wrap.fullscreen ~ #bottom-panel { display: none; }
-
-    /* ───────────── PANEL INFERIOR ───────────── */
     #bottom-panel {
-      flex: 1; overflow-y: auto; overflow-x: hidden; background: white;
-      position: relative; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
-      padding-bottom: var(--sab);
+      flex: 1; overflow-y: auto; background: white; padding: 0.5rem 1rem 1rem;
     }
-    .handle-row { display: flex; justify-content: center; padding: 8px 0 4px; }
-    .handle { width: 36px; height: 4px; background: #dadce0; border-radius: 2px; }
+    .section { padding: 0.5rem 0; border-bottom: 1px solid #f0f0f0; }
+    .section-title { font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 0.3rem; }
 
-    #gps-row {
-      display: flex; align-items: center; gap: .5rem; padding: .4rem 1rem .6rem;
-      font-size: .78rem; color: var(--muted);
-    }
-    .sdot { width: 8px; height: 8px; border-radius: 50%; background: #dadce0; flex-shrink: 0; }
-    .sdot.on { background: var(--green); animation: blink 1.5s ease-in-out infinite; }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
-
-    #coords-mini {
-      padding: .3rem 1rem; font-size: .71rem; color: var(--muted);
-      font-family: 'Courier New', monospace; background: #fafafa;
-      border-bottom: 1px solid #f0f0f0; display: none;
-    }
-
-    .section { padding: .75rem 1rem; border-bottom: 1px solid #f0f0f0; }
-    .section-title { font-size: .69rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .6rem; }
-
-    #no-dest { text-align: center; padding: 1.75rem 1rem 1.5rem; color: var(--muted); font-size: .85rem; }
-    #no-dest .nd-icon { font-size: 2.2rem; margin-bottom: .5rem; }
-
+    #no-dest { text-align: center; padding: 1.5rem 0; color: #6b7280; }
     #route-card { display: none; }
-    .route-row { background: #f8f9fa; border-radius: 12px; padding: .75rem 1rem; display: flex; align-items: center; gap: .75rem; }
-    .route-icon { font-size: 1.6rem; flex-shrink: 0; }
-    .route-info { flex: 1; }
-    .route-km { font-size: 1.05rem; font-weight: 700; color: var(--text); }
-    .route-sub { font-size: .75rem; color: var(--muted); margin-top: 2px; }
-    .route-time { font-size: .82rem; font-weight: 600; color: var(--blue); background: rgba(26,115,232,.08); border-radius: 8px; padding: .25rem .6rem; flex-shrink: 0; }
-
     #tarifa-section { display: none; }
-    .chips { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .75rem; }
+
     .chip {
-      padding: .32rem .75rem; border-radius: 20px; font-size: .76rem; font-weight: 500;
-      border: 1.5px solid var(--border); color: var(--muted); cursor: pointer;
-      background: white; transition: all .15s; white-space: nowrap; -webkit-appearance: none;
+      padding: 0.2rem 0.8rem; border-radius: 20px; border: 1px solid #ddd;
+      background: white; font-size: 0.75rem; cursor: pointer; margin-right: 0.3rem;
     }
-    .chip:hover { border-color: var(--blue); color: var(--blue); }
-    .chip.active { background: var(--blue); border-color: var(--blue); color: white; }
+    .chip.active { background: #1a73e8; color: white; border-color: #1a73e8; }
     .chip.hidden { display: none; }
 
-    #price-card { display: none; margin-top: .6rem; }
-    .price-fixed { background: linear-gradient(135deg, #34a853 0%, #1e7e34 100%); border-radius: 14px; padding: 1rem 1.25rem; color: white; margin-bottom: .65rem; }
-    .pf-label { font-size: .74rem; opacity: .85; margin-bottom: .2rem; }
-    .pf-main { font-size: 2.2rem; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
-    .pf-desc { font-size: .75rem; opacity: .85; margin-top: .3rem; line-height: 1.4; }
-    .pf-badge { display: inline-block; background: rgba(255,255,255,.2); border-radius: 6px; padding: .15rem .5rem; font-size: .7rem; font-weight: 600; margin-top: .4rem; }
-    .price-meter { background: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%); border-radius: 14px; padding: 1rem 1.25rem; color: white; display: flex; align-items: center; justify-content: space-between; margin-bottom: .65rem; }
-    .pm-left .pm-label { font-size: .74rem; opacity: .85; margin-bottom: .15rem; }
-    .pm-left .pm-main { font-size: 2.1rem; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
-    .pm-right { text-align: center; background: rgba(255,255,255,.18); border-radius: 10px; padding: .4rem .7rem; min-width: 72px; }
-    .pm-right .pm-tag { font-size: .71rem; font-weight: 600; }
-    .price-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: .5rem; margin-bottom: .6rem; }
-    .pg-item { background: #f8f9fa; border-radius: 10px; padding: .6rem .5rem; text-align: center; }
-    .pg-val { font-size: .92rem; font-weight: 700; color: var(--text); }
-    .pg-key { font-size: .64rem; color: var(--muted); margin-top: 2px; line-height: 1.3; }
-    .tarifa-explain { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: .7rem .9rem; margin-bottom: .6rem; }
-    .te-title { font-size: .72rem; font-weight: 700; color: #92400e; margin-bottom: .4rem; display: flex; align-items: center; gap: .3rem; }
-    .te-row { display: flex; justify-content: space-between; align-items: flex-start; font-size: .75rem; color: #78350f; padding: .2rem 0; border-bottom: 1px solid #fde68a; }
-    .te-row:last-child { border-bottom: none; padding-bottom: 0; }
-    .te-val { font-weight: 600; white-space: nowrap; margin-left: .5rem; }
-    .info-note { font-size: .7rem; color: var(--muted); text-align: center; margin-top: .5rem; line-height: 1.55; padding: 0 .25rem; }
+    #price-card { display: none; margin-top: 0.5rem; }
+    .price-meter { background: #1a73e8; border-radius: 12px; padding: 0.8rem 1rem; color: white; display: flex; justify-content: space-between; }
+    .pm-main { font-size: 1.8rem; font-weight: 700; }
 
-    #route-loading { display: none; text-align: center; padding: .75rem 1rem; font-size: .82rem; color: var(--muted); }
-
-    /* ───────────── BOTÓN SOLICITAR TAXI ───────────── */
-    #solicitar-section {
-      display: none;
-      padding: 0.75rem 1rem;
-      border-top: 1px solid #f0f0f0;
-      background: white;
-    }
+    #solicitar-section { display: none; padding: 0.5rem 0; border-top: 1px solid #f0f0f0; }
     .btn-solicitar {
-      display: block;
-      width: 100%;
-      padding: 1rem;
-      background: linear-gradient(135deg, #fbbc04, #f9ab00);
-      color: #202124;
-      font-family: 'Inter', sans-serif;
-      font-weight: 700;
-      font-size: 1.1rem;
-      border: none;
-      border-radius: 14px;
-      cursor: pointer;
-      box-shadow: 0 4px 16px rgba(251, 188, 4, 0.4);
-      transition: transform 0.15s, box-shadow 0.15s;
-      -webkit-appearance: none;
+      width: 100%; padding: 0.9rem; background: linear-gradient(135deg, #fbbc04, #f9ab00);
+      border: none; border-radius: 14px; font-weight: 700; font-size: 1rem;
+      cursor: pointer; box-shadow: 0 4px 16px rgba(251,188,4,0.4);
     }
-    .btn-solicitar:hover { transform: scale(1.02); box-shadow: 0 6px 24px rgba(251, 188, 4, 0.6); }
-    .btn-solicitar:active { transform: scale(0.98); }
-    .btn-solicitar:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-solicitar:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .btn-cancelar-solicitud {
-      display: inline-block;
-      margin-top: 0.5rem;
-      background: transparent;
-      color: var(--red);
-      border: 1px solid var(--red);
-      border-radius: 20px;
-      padding: 0.3rem 1.2rem;
-      font-family: 'Inter', sans-serif;
-      font-weight: 600;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: 0.2s;
-      -webkit-appearance: none;
-    }
-    .btn-cancelar-solicitud:hover {
-      background: var(--red);
-      color: white;
-    }
-
-    #solicitar-feedback {
-      display: none;
-      text-align: center;
-      margin-top: 0.5rem;
-      font-size: 0.85rem;
-      color: var(--muted);
-    }
+    #solicitar-feedback { display: none; text-align: center; margin-top: 0.5rem; font-size: 0.85rem; color: #6b7280; }
     #solicitar-feedback .estado { font-weight: 600; }
-    #solicitar-feedback .aceptado { color: #34a853; }
-    #solicitar-feedback .esperando { color: #fbbc04; }
-
-    /* ───────────── BANNER INSTALACIÓN PWA ───────────── */
-    #install-banner {
-      display: none;
-      position: fixed;
-      bottom: calc(20px + var(--sab));
-      left: 16px; right: 16px;
-      background: linear-gradient(135deg, #0c0e12 0%, #12151b 100%);
-      border: 1px solid rgba(62,207,142,.4);
-      border-radius: 16px; padding: 14px 16px; z-index: 999;
-      box-shadow: 0 8px 32px rgba(0,0,0,.6), 0 0 0 1px rgba(62,207,142,.1);
-      animation: slideUpBanner .4s cubic-bezier(.16,1,.3,1);
-      backdrop-filter: blur(8px);
+    #solicitar-feedback .btn-cancelar {
+      display: none; margin-top: 0.4rem; background: transparent;
+      color: #ea4335; border: 1px solid #ea4335; border-radius: 20px;
+      padding: 0.2rem 1rem; font-size: 0.8rem; cursor: pointer;
     }
-    @media (min-width: 821px) {
-      #install-banner { bottom: 24px; left: 50%; right: auto; transform: translateX(-50%); width: 380px; }
-    }
-    @keyframes slideUpBanner { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
-    .install-banner-inner { display: flex; align-items: center; gap: 12px; }
-    .install-icon { width: 48px; height: 48px; min-width: 48px; background: var(--auth-s); border-radius: 12px; border: 1px solid rgba(62,207,142,.2); display: flex; align-items: center; justify-content: center; font-size: 26px; }
-    .install-text { flex: 1; }
-    .install-text strong { display: block; font-size: 14px; color: #e8e8f0; font-weight: 700; margin-bottom: 2px; }
-    .install-text span { font-size: 11px; color: var(--muted2); }
-    .install-actions { display: flex; gap: 8px; align-items: center; }
-    .btn-install-banner { background: var(--teal); color: #000; border: none; border-radius: 10px; padding: 10px 18px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; white-space: nowrap; box-shadow: 0 4px 12px rgba(62,207,142,.3); transition: all .2s; -webkit-appearance: none; }
-    .btn-install-banner:hover { filter: brightness(1.08); }
-    .btn-install-banner:active { transform: scale(.96); }
-    .btn-dismiss { background: transparent; color: var(--muted2); border: none; font-size: 20px; cursor: pointer; padding: 4px; line-height: 1; }
+    #solicitar-feedback .btn-cancelar:hover { background: #ea4335; color: white; }
 
     .modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
-      z-index: 9999; display: none; align-items: center; justify-content: center; padding: 1.5rem;
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      display: none; align-items: center; justify-content: center;
+      z-index: 9999; padding: 1rem;
     }
     .modal-overlay.show { display: flex; }
     .modal-box {
-      background: var(--auth-s); border-radius: 20px; padding: 2rem; max-width: 380px; width: 100%;
-      border: 1px solid var(--auth-b); color: #e8e8f0;
+      background: #1a1a2e; border-radius: 16px; padding: 1.5rem;
+      max-width: 340px; width: 100%;
     }
-    .modal-box h2 { font-size: 1.2rem; margin-bottom: .5rem; }
-    .modal-box p { font-size: .85rem; color: var(--muted2); margin-bottom: 1rem; }
-    .modal-box .btn-group { display: flex; gap: 0.5rem; }
-    .modal-box .btn-group button { flex: 1; padding: 0.6rem; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; font-family: 'Inter', sans-serif; }
-    .modal-box .btn-primary { background: var(--teal); color: #0f1117; }
-    .modal-box .btn-danger { background: var(--red); color: white; }
-
-    /* Leaflet */
-    .leaflet-control-zoom { border-radius: 8px !important; overflow: hidden; box-shadow: var(--sh) !important; border: none !important; }
-    .leaflet-control-zoom a { color: var(--muted) !important; font-weight: 600 !important; }
-    .leaflet-popup-content-wrapper { border-radius: 12px !important; box-shadow: var(--sh2) !important; font-family: 'Inter', sans-serif !important; }
-    .leaflet-popup-tip { display: none; }
-    .leaflet-popup-content { margin: .65rem .9rem !important; font-size: .85rem !important; }
-
-    @media (max-width: 600px) { #install-banner { bottom: calc(80px + var(--sab)); } }
-    #bottom-panel::-webkit-scrollbar { display: none; }
+    .modal-box h2 { margin-bottom: 0.5rem; font-size: 1.2rem; }
+    .modal-box .btn-group { display: flex; gap: 0.5rem; margin-top: 1rem; }
+    .modal-box .btn-group button { flex: 1; padding: 0.6rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn-danger { background: #ea4335; color: white; }
+    .btn-primary { background: #3ecf8e; color: #0f1117; }
   </style>
 </head>
 <body>
 
-<!-- ════ AUTH ════ -->
-<div id="screen-auth">
+<!-- ═══ LOGIN ═══ -->
+<div id="auth-screen">
   <div class="card">
-    <div class="brand">
-      <div class="brand-icon">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M13.5 3L4.5 14h8.25L10.5 21l9-11h-8.25L13.5 3Z" fill="#3ecf8e"/></svg>
-      </div>
-      <span class="brand-name">Tazi</span>
-    </div>
-    <div id="amsg" class="amsg"></div>
-    <div id="view-login" class="view active">
-      <h1>Bienvenido</h1>
-      <p class="subtitle">Tu taxi en Madrid</p>
-      <div class="field"><label for="le">Correo</label><input id="le" type="email" placeholder="tu@correo.com" autocomplete="email"/></div>
-      <div class="field"><label for="lp">Contraseña</label><input id="lp" type="password" placeholder="••••••••" autocomplete="current-password"/></div>
-      <button id="btn-login" class="btn" onclick="doLogin()">Iniciar sesión</button>
-      <div class="divider">o</div>
-      <button class="btn btn-ghost" onclick="doMagic()">Enviar enlace mágico</button>
-      <button class="btn btn-demo" onclick="entrarDemo()">🚕 Entrar sin cuenta (demo)</button>
-      <button class="btn btn-install" id="btn-install" onclick="instalarApp()">📲 Instalar Tazi</button>
-      <p class="footer-link">¿Sin cuenta? <a href="#" onclick="sw('register')">Regístrate</a></p>
-    </div>
-    <div id="view-register" class="view">
-      <h1>Crear cuenta</h1>
-      <p class="subtitle">Empieza a usar Tazi gratis</p>
-      <div class="field"><label for="re">Correo</label><input id="re" type="email" placeholder="tu@correo.com" autocomplete="email"/></div>
-      <div class="field"><label for="rp">Contraseña</label><input id="rp" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"/></div>
-      <button id="btn-reg" class="btn" onclick="doRegister()">Crear cuenta</button>
-      <p class="footer-link">¿Ya tienes cuenta? <a href="#" onclick="sw('login')">Inicia sesión</a></p>
-    </div>
+    <h1>🚖 Tazi</h1>
+    <p class="subtitle">Tu taxi en Madrid</p>
+    <input id="login-email" type="email" placeholder="Correo electrónico" />
+    <input id="login-password" type="password" placeholder="Contraseña" />
+    <button class="btn" onclick="doLogin()">Iniciar sesión</button>
+    <div id="login-error" class="error"></div>
+    <button class="btn btn-demo" onclick="entrarDemo()">🚕 Entrar sin cuenta (demo)</button>
   </div>
 </div>
 
-<!-- Modal instrucciones instalación manual -->
-<div class="modal-overlay" id="install-modal">
-  <div class="modal-box">
-    <h2>📲 Instalar Tazi</h2>
-    <p>Tu navegador no permite instalación automática, pero puedes añadir Tazi a tu pantalla de inicio:</p>
-    <ol>
-      <li><strong>Android (Chrome):</strong> toca el menú (⋮) y selecciona <em>Instalar aplicación</em>.</li>
-      <li><strong>iPhone (Safari):</strong> toca el icono de compartir y elige <em>Añadir a pantalla de inicio</em>.</li>
-      <li><strong>Otros navegadores:</strong> busca <em>Añadir a pantalla de inicio</em> en el menú.</li>
-    </ol>
-    <button class="btn" onclick="cerrarModal()">Entendido</button>
+<!-- ═══ MAPA ═══ -->
+<div id="map-screen">
+  <div id="map-wrap">
+    <div id="map"></div>
+    <div id="search-bar">
+      <div class="sbox-wrap">
+        <div class="sbox-row">
+          <div class="orig-dot"></div>
+          <input id="orig-input" type="text" placeholder="Origen (GPS)" readonly />
+          <button class="btn-clear" onclick="clearOrig()">✕</button>
+        </div>
+        <div class="sbox-row">
+          <div class="dest-dot"></div>
+          <input id="dest-input" type="text" placeholder="¿A dónde vas?" />
+          <button class="btn-clear" onclick="clearDest()">✕</button>
+          <button class="btn-search" onclick="doSearch()">→</button>
+        </div>
+      </div>
+      <div id="ac-list"></div>
+    </div>
+    <button id="btn-logout" onclick="doLogout()">✕ Salir</button>
+    <button class="map-fab" id="btn-center" onclick="centerMap()">◎</button>
+    <button class="map-fab" id="btn-expand" onclick="toggleFull()">⛶</button>
+  </div>
+
+  <div id="bottom-panel">
+    <div id="gps-row" style="display:flex; align-items:center; gap:0.5rem; padding:0.4rem 1rem; font-size:0.8rem; color:#6b7280;">
+      <span id="gps-status">📍 Conectando GPS...</span>
+    </div>
+    <div id="no-dest" class="section">
+      <div style="font-size:2rem; margin-bottom:0.5rem;">🗺️</div>
+      Busca un destino para ver la ruta y el precio del taxi
+    </div>
+    <div id="route-card" class="section" style="display:none;">
+      <div class="section-title">Ruta por carretera</div>
+      <div style="display:flex; align-items:center; gap:0.8rem; background:#f8f9fa; border-radius:12px; padding:0.6rem 1rem;">
+        <span style="font-size:1.6rem;">🚗</span>
+        <div style="flex:1;">
+          <div id="route-km" style="font-weight:700;">—</div>
+          <div style="font-size:0.75rem; color:#6b7280;">Distancia real por calles</div>
+        </div>
+        <div id="route-time" style="font-weight:600; color:#1a73e8;">—</div>
+      </div>
+    </div>
+    <div id="tarifa-section" class="section" style="display:none;">
+      <div class="section-title">Tarifa oficial Madrid 2026</div>
+      <div id="chips-container">
+        <button class="chip active" data-key="t1" onclick="setTarifa('t1',this)">T1 · Día</button>
+        <button class="chip" data-key="t2" onclick="setTarifa('t2',this)">T2 · Noche/Fest.</button>
+        <button class="chip" data-key="t4" onclick="setTarifa('t4',this)">✈️ Apto→M30</button>
+        <button class="chip" data-key="t3" onclick="setTarifa('t3',this)">✈️ Apto→fuera M30</button>
+        <button class="chip" data-key="t7" onclick="setTarifa('t7',this)">🚉 Estaciones/IFEMA</button>
+      </div>
+      <div id="price-card" style="display:none; margin-top:0.5rem;">
+        <div class="price-meter">
+          <div><div style="font-size:0.75rem; opacity:0.8;">Precio estimado</div>
+          <div class="pm-main" id="precio-main">0,00 €</div></div>
+          <div style="text-align:center; background:rgba(255,255,255,0.2); border-radius:8px; padding:0.2rem 0.6rem;">
+            <span id="tarifa-tag" style="font-weight:600;">T1</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="solicitar-section" style="display:none; padding:0.5rem 0;">
+      <button class="btn-solicitar" onclick="solicitarTaxi()">🚖 Solicitar taxi</button>
+      <div id="solicitar-feedback">
+        <span id="solicitar-estado" class="estado"></span><br/>
+        <button class="btn-cancelar" onclick="cancelarSolicitud()">✕ Cancelar</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -426,94 +262,6 @@
   </div>
 </div>
 
-<!-- ════ MAPA ════ -->
-<div id="screen-map">
-  <div id="map-wrap">
-    <div id="map"></div>
-    <div id="search-bar">
-      <div class="sbox-wrap">
-        <div class="sbox-row">
-          <div class="orig-dot"></div>
-          <input id="orig-input" type="text" placeholder="Mi ubicación (GPS)"
-            oninput="onOrigSI()" onkeydown="if(event.key==='Enter')doOrigSearch()" onfocus="focusOrig()"/>
-          <button class="sbox-clear" id="btn-clear-orig" onclick="clearOrig()" style="display:none">✕</button>
-        </div>
-        <div class="sbox-row">
-          <div class="dest-dot"></div>
-          <input id="dest-input" type="text" placeholder="¿A dónde vas?"
-            oninput="onSI()" onkeydown="if(event.key==='Enter')doSearch()" onfocus="focusDest()"/>
-          <button class="sbox-clear" id="btn-clear" onclick="clearDest()" style="display:none">✕</button>
-          <button class="sbox-btn" onclick="doSearch()">→</button>
-        </div>
-      </div>
-      <div id="ac-list"></div>
-    </div>
-    <button id="btn-logout" onclick="doLogout()">✕ Salir</button>
-    <button class="map-fab" id="btn-center" onclick="centerMap()">◎</button>
-    <button class="map-fab" id="btn-expand" onclick="toggleFull()">⛶</button>
-  </div>
-
-  <div id="bottom-panel">
-    <div class="handle-row"><div class="handle"></div></div>
-    <div id="gps-row"><div class="sdot" id="sdot"></div><span id="stext">Conectando GPS…</span></div>
-    <div id="coords-mini"></div>
-
-    <div id="no-dest" class="section">
-      <div class="nd-icon">🗺️</div>
-      Busca un destino para ver la ruta<br/>real por calles y el precio del taxi
-    </div>
-
-    <div id="route-loading" class="section">
-      <span class="sp" style="border-top-color:var(--blue)"></span> Calculando ruta por calles…
-    </div>
-
-    <div id="route-card" class="section">
-      <div class="section-title">Ruta por carretera</div>
-      <div class="route-row">
-        <div class="route-icon">🚗</div>
-        <div class="route-info">
-          <div class="route-km" id="route-km">—</div>
-          <div class="route-sub" id="route-sub">Distancia real por calles</div>
-        </div>
-        <div class="route-time" id="route-time">—</div>
-      </div>
-    </div>
-
-    <div id="tarifa-section" class="section">
-      <div class="section-title">Tarifa oficial Madrid 2026</div>
-      <div class="chips" id="chips-container">
-        <button class="chip" data-key="t1" onclick="setTarifa('t1',this)">T1 · Día</button>
-        <button class="chip" data-key="t2" onclick="setTarifa('t2',this)">T2 · Noche/Fest.</button>
-        <button class="chip" data-key="t4" onclick="setTarifa('t4',this)">✈️ Apto→M30</button>
-        <button class="chip" data-key="t3" onclick="setTarifa('t3',this)">✈️ Apto→fuera M30</button>
-        <button class="chip" data-key="t7" onclick="setTarifa('t7',this)">🚉 Estaciones/IFEMA</button>
-      </div>
-      <div id="price-card"></div>
-    </div>
-
-    <!-- ═══ BOTÓN SOLICITAR TAXI ═══ -->
-    <div id="solicitar-section">
-      <button id="btn-solicitar" class="btn-solicitar" onclick="solicitarTaxi()">🚖 Solicitar taxi</button>
-      <div id="solicitar-feedback">
-        <span class="estado esperando" id="solicitar-estado">⏳ Esperando conductor...</span>
-        <button class="btn-cancelar-solicitud" onclick="cancelarSolicitud()">✕ Cancelar</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- BANNER INSTALACIÓN PWA -->
-<div id="install-banner">
-  <div class="install-banner-inner">
-    <div class="install-icon">🚕</div>
-    <div class="install-text"><strong>Tazi</strong><span>Instalar como app en tu móvil</span></div>
-    <div class="install-actions">
-      <button class="btn-install-banner" onclick="instalarApp()">Instalar</button>
-      <button class="btn-dismiss" onclick="dismissInstall()" title="Cerrar">✕</button>
-    </div>
-  </div>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -524,799 +272,363 @@ const SB_URL = 'https://ejbvfirfodfktekgpwkm.supabase.co';
 const SB_KEY = 'sb_publishable_ZNwpPu1uqxZfKWOU6FDgbQ_0sLhGrXt';
 let sb = null;
 let supabaseReady = false;
+
 try {
   if (typeof supabase !== 'undefined') {
     const { createClient } = supabase;
     sb = createClient(SB_URL, SB_KEY);
     supabaseReady = true;
+    console.log('✅ Supabase inicializado');
   }
-} catch(e) { console.warn('Supabase no disponible, modo demo'); }
-
-// ═══════════════════════════════════════════════════════════════════
-// TARIFAS TAXI MADRID 2026
-// ═══════════════════════════════════════════════════════════════════
-const TARIFAS = {
-  t1: { id:'T1', nombre:'Laborable diurno', horario:'Lun–Vie 7:00–21:00 h', tipo:'metro', bandera:2.55, km:1.40, min:4.50 },
-  t2: { id:'T2', nombre:'Nocturno y festivos', horario:'Diario 21:00–7:00 h · Sáb/Dom/Fest 7:00–21:00 h', tipo:'metro', bandera:3.20, km:1.60, min:5.50 },
-  t4: { id:'T4', nombre:'Aeropuerto → dentro M-30', horario:'24h · 365 días · Sin suplementos', tipo:'fijo', precio_fijo:33.00, nota:'Tarifa fija entre cualquier terminal (T1–T4) y cualquier punto dentro de la M-30. Sin recargo por equipaje, nº de pasajeros ni horario.' },
-  t3: { id:'T3', nombre:'Aeropuerto → fuera M-30', horario:'24h · 365 días', tipo:'minimo_luego_metro', minimo:22.00, franquicia_km:9.0, km_t1:1.40, km_t2:1.60, nota:'Mínimo 22 € cubre los primeros 9 km. Superados, el taxímetro sigue en T1 (día) o T2 (noche/fest).' },
-  t7: { id:'T7', nombre:'Estaciones y IFEMA', horario:'24h · 365 días', tipo:'salida_especial', salida:8.00, franquicia_m:1450, km:1.40, km_noche:1.60, nota:'Salida desde: Atocha · Chamartín · Av. América · Méndez Álvaro · IFEMA.\n8 € incluye los primeros 1.450 m. Luego T1 (día) o T2 (noche/fest).' }
-};
-
-// ═══════════════════════════════════════════════════════════════════
-// DETECCIÓN DE ORIGEN
-// ═══════════════════════════════════════════════════════════════════
-const AIRPORT_COORDS = { lat: 40.4722, lng: -3.5604 };
-const AIRPORT_RADIUS_KM = 4.0;
-const STATION_COORDS = [
-  { lat: 40.4060, lng: -3.6897 }, { lat: 40.4729, lng: -3.6823 },
-  { lat: 40.4379, lng: -3.6774 }, { lat: 40.4011, lng: -3.6787 }, { lat: 40.4695, lng: -3.5988 }
-];
-const STATION_RADIUS_KM = 0.8;
-
-function distanciaKm(a, b) {
-  const R = 6371;
-  const dLat = (b.lat - a.lat) * Math.PI / 180;
-  const dLng = (b.lng - a.lng) * Math.PI / 180;
-  const sin2 = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
-  return R * 2 * Math.asin(Math.sqrt(sin2));
-}
-
-function detectarOrigen() {
-  const origen = origPos || myPos;
-  if (!origen) return 'ciudad';
-  const nombre = (origName || '').toLowerCase();
-  if (nombre.includes('aeropuerto') || nombre.includes('barajas')) return 'aeropuerto';
-  const estacionesNombres = ['atocha', 'chamartín', 'américa', 'méndez álvaro', 'méndez alvaro', 'ifema'];
-  if (estacionesNombres.some(s => nombre.includes(s))) return 'estacion';
-  if (distanciaKm(origen, AIRPORT_COORDS) <= AIRPORT_RADIUS_KM) return 'aeropuerto';
-  for (let st of STATION_COORDS) {
-    if (distanciaKm(origen, st) <= STATION_RADIUS_KM) return 'estacion';
-  }
-  return 'ciudad';
+} catch(e) {
+  console.warn('⚠️ Supabase no disponible, modo local');
 }
 
 // ═══════════════════════════════════════════════════════════════════
 // ESTADO GLOBAL
 // ═══════════════════════════════════════════════════════════════════
-let map, myMarker, accCircle, destMarker, routeLayer;
-let myPos = null, origPos = null, origName = '';
-let destPos = null, destName = '';
-let routeKm = null, routeDurMin = null;
-let watchId = null, currentUser = null, lastSaved = 0;
-let tarifaKey = 't1', fullscreen = false;
-let fetchingRoute = false, routeFetchTimeout = null, lastRouteKm = null, isFlying = false;
-let lastMyPos = null, acFocus = 'dest';
-const GPS_THRESHOLD_M = 15;
-const SAVE_MS = 10000;
+let currentUser = null;
+let map = null;
+let myPos = null;
+let destPos = null;
+let routeKm = null;
+let tarifaKey = 't1';
+let origName = 'Mi ubicación';
+let destName = '';
+let routeLayer = null;
+let myMarker = null;
+let destMarker = null;
+let watchId = null;
 
 // Estado de la solicitud
 let solicitudId = null;
 let solicitudChannel = null;
-let solicitudTimer = null;        // temporizador para cancelación
+let solicitudTimer = null;
 let solicitudAceptada = false;
 let solicitudAceptadaTimestamp = null;
-let solicitudPendingCancel = false; // si estamos en el modal de cancelación
+let solicitudPendingCancel = false;
 
 // ═══════════════════════════════════════════════════════════════════
-// PWA INSTALACIÓN
+// TARIFAS
 // ═══════════════════════════════════════════════════════════════════
-let deferredPrompt = null;
-const btnInstall = document.getElementById('btn-install');
-const banner = document.getElementById('install-banner');
-const modal = document.getElementById('install-modal');
+const TARIFAS = {
+  t1: { id:'T1', nombre:'Día', bandera:2.55, km:1.40, min:4.50 },
+  t2: { id:'T2', nombre:'Noche', bandera:3.20, km:1.60, min:5.50 },
+  t4: { id:'T4', nombre:'Aeropuerto → M30', tipo:'fijo', precio_fijo:33.00 },
+  t3: { id:'T3', nombre:'Aeropuerto → fuera M30', tipo:'minimo', minimo:22.00, franquicia:9.0 },
+  t7: { id:'T7', nombre:'Estaciones', tipo:'salida', salida:8.00, franquicia_m:1.45 }
+};
 
-const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-if (isStandalone) {
-  btnInstall.style.display = 'none';
-  banner.style.display = 'none';
-} else {
-  btnInstall.style.display = 'flex';
+// ═══════════════════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════════════════
+function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-password').value.trim();
+  if (!email || !pass) {
+    document.getElementById('login-error').textContent = 'Completa todos los campos.';
+    return;
+  }
+  // Si Supabase está disponible, intentar login real
+  if (supabaseReady && sb) {
+    sb.auth.signInWithPassword({ email, password: pass })
+      .then(({ data, error }) => {
+        if (error) throw error;
+        currentUser = data.user;
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('map-screen').classList.add('active');
+        initMap();
+        startGPS();
+      })
+      .catch(err => {
+        document.getElementById('login-error').textContent = '❌ ' + err.message;
+      });
+  } else {
+    // Modo local (sin Supabase)
+    currentUser = { id: 'local-user', email };
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('map-screen').classList.add('active');
+    initMap();
+    startGPS();
+  }
 }
 
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  if (!sessionStorage.getItem('install_dismissed')) {
-    banner.style.display = 'block';
-  }
-  btnInstall.style.display = 'flex';
-});
-
-window.addEventListener('appinstalled', () => {
-  deferredPrompt = null;
-  btnInstall.style.display = 'none';
-  banner.style.display = 'none';
-  toast('¡Tazi instalada correctamente! 🎉', 'success');
-});
-
-function instalarApp() {
-  if (deferredPrompt) {
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then((choice) => {
-      if (choice.outcome === 'accepted') {
-        btnInstall.style.display = 'none';
-        banner.style.display = 'none';
+async function entrarDemo() {
+  // Intentar login automático con usuario demo en Supabase, o fallback local
+  if (supabaseReady && sb) {
+    try {
+      // Intentar iniciar sesión con demo@tazi.es / 123456
+      const { data, error } = await sb.auth.signInWithPassword({
+        email: 'demo@tazi.es',
+        password: '123456'
+      });
+      if (!error) {
+        currentUser = data.user;
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('map-screen').classList.add('active');
+        initMap();
+        startGPS();
+        return;
       }
-      deferredPrompt = null;
-    });
-  } else {
-    modal.classList.add('show');
+      // Si falla, intentar crear el usuario
+      const { error: signUpError } = await sb.auth.signUp({
+        email: 'demo@tazi.es',
+        password: '123456'
+      });
+      if (!signUpError) {
+        // Esperar un momento y luego iniciar sesión
+        await new Promise(r => setTimeout(r, 500));
+        const { data: loginData, error: loginError } = await sb.auth.signInWithPassword({
+          email: 'demo@tazi.es',
+          password: '123456'
+        });
+        if (!loginError) {
+          currentUser = loginData.user;
+          document.getElementById('auth-screen').style.display = 'none';
+          document.getElementById('map-screen').classList.add('active');
+          initMap();
+          startGPS();
+          return;
+        }
+      }
+    } catch(e) {
+      console.warn('Supabase demo falló, usando modo local', e);
+    }
   }
-}
-
-function cerrarModal() { modal.classList.remove('show'); }
-function dismissInstall() {
-  banner.style.display = 'none';
-  sessionStorage.setItem('install_dismissed', '1');
-}
-
-function toast(msg, type = 'success') {
-  const t = document.createElement('div');
-  t.style.cssText = `
-    position: fixed; bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-    left: 50%; transform: translateX(-50%);
-    background: #1a1a2e; border: 1px solid #2a2a45;
-    border-radius: 40px; padding: 12px 28px;
-    font-size: 13px; font-family: 'Inter', sans-serif; font-weight: 500;
-    z-index: 2100; color: ${type === 'success' ? '#34d399' : '#fb7185'};
-    box-shadow: 0 12px 36px rgba(0,0,0,.6);
-    transition: all 0.3s; opacity: 0; pointer-events: none; white-space: nowrap;
-  `;
-  t.textContent = msg;
-  document.body.appendChild(t);
-  requestAnimationFrame(() => { t.style.opacity = '1'; });
-  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 2800);
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// AUTH UI
-// ═══════════════════════════════════════════════════════════════════
-function showMsg(t, tp='error') { const e=document.getElementById('amsg'); e.textContent=t; e.className='amsg '+tp+' show'; }
-function clearMsg() { const e=document.getElementById('amsg'); e.className='amsg'; e.textContent=''; }
-function sw(n) { clearMsg(); document.querySelectorAll('.view').forEach(v=>v.classList.remove('active')); document.getElementById('view-'+n).classList.add('active'); }
-function ld(id, on, lbl) { const b=document.getElementById(id); if(!b)return; b.disabled=on; b.innerHTML=on?'<span class="sp"></span>Cargando…':lbl; }
-
-async function doLogin() {
-  if(!supabaseReady){ showMsg('Supabase no disponible, usa el modo demo.'); return; }
-  clearMsg();
-  const e=document.getElementById('le').value.trim(), p=document.getElementById('lp').value;
-  if(!e||!p){ showMsg('Completa todos los campos.'); return; }
-  ld('btn-login', true, 'Iniciar sesión');
-  const { error } = await sb.auth.signInWithPassword({ email:e, password:p });
-  ld('btn-login', false, 'Iniciar sesión');
-  if(error) showMsg(error.message);
-}
-
-async function doRegister() {
-  if(!supabaseReady){ showMsg('Supabase no disponible, usa el modo demo.'); return; }
-  clearMsg();
-  const e=document.getElementById('re').value.trim(), p=document.getElementById('rp').value;
-  if(!e||!p){ showMsg('Completa todos los campos.'); return; }
-  if(p.length<6){ showMsg('Mínimo 6 caracteres.'); return; }
-  ld('btn-reg', true, 'Crear cuenta');
-  const { error } = await sb.auth.signUp({ email:e, password:p });
-  ld('btn-reg', false, 'Crear cuenta');
-  if(error) showMsg(error.message); else showMsg('¡Cuenta creada! Revisa tu correo.', 'success');
-}
-
-async function doMagic() {
-  if(!supabaseReady){ showMsg('Supabase no disponible, usa el modo demo.'); return; }
-  clearMsg();
-  const e=document.getElementById('le').value.trim();
-  if(!e){ showMsg('Escribe tu correo primero.'); return; }
-  const { error } = await sb.auth.signInWithOtp({ email:e });
-  if(error) showMsg(error.message); else showMsg('Enlace enviado — revisa tu bandeja.', 'success');
-}
-
-function entrarDemo() {
+  // Fallback: modo local sin Supabase
   currentUser = { id: 'demo-user', email: 'demo@tazi.es' };
-  document.getElementById('screen-auth').style.display = 'none';
-  document.getElementById('screen-map').classList.add('active');
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('map-screen').classList.add('active');
   initMap();
   startGPS();
-}
-
-async function doLogout() {
-  stopGPS();
-  if(supabaseReady && currentUser && currentUser.id !== 'demo-user') {
-    await sb.auth.signOut();
-  } else {
-    currentUser = null;
-    document.getElementById('screen-map').classList.remove('active');
-    document.getElementById('screen-auth').style.display = '';
-    if(map){ map.remove(); map=null; myMarker=null; accCircle=null; destMarker=null; routeLayer=null; }
-    resetSolicitud();
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// SESIÓN
-// ═══════════════════════════════════════════════════════════════════
-if(supabaseReady) {
-  (async()=>{
-    const { data: { session } } = await sb.auth.getSession();
-    if(session?.user) onLogin(session.user);
-  })();
-  sb.auth.onAuthStateChange((_, s)=>{
-    if(s?.user) onLogin(s.user);
-    else onLogout();
-  });
-}
-
-function onLogin(u) {
-  currentUser = u;
-  document.getElementById('screen-auth').style.display = 'none';
-  document.getElementById('screen-map').classList.add('active');
-  initMap();
-  startGPS();
-}
-
-function onLogout() {
-  currentUser = null;
-  document.getElementById('screen-map').classList.remove('active');
-  document.getElementById('screen-auth').style.display = '';
-  if(map){ map.remove(); map=null; myMarker=null; accCircle=null; destMarker=null; routeLayer=null; }
-  resetSolicitud();
 }
 
 // ═══════════════════════════════════════════════════════════════════
 // MAPA
 // ═══════════════════════════════════════════════════════════════════
 function initMap() {
-  if(map) return;
-  map = L.map('map', { center:[40.4168,-3.7038], zoom:13, zoomControl:true });
+  if (map) return;
+  map = L.map('map').setView([40.4168, -3.7038], 13);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    attribution:'© <a href="https://openstreetmap.org">OSM</a> © <a href="https://carto.com">CARTO</a>',
-    maxZoom:19, subdomains:'abcd'
+    attribution: '© OSM, © CARTO',
+    maxZoom: 19,
+    subdomains: 'abcd'
   }).addTo(map);
-  map.on('click', ()=>document.getElementById('ac-list').style.display='none');
 }
 
-function centerMap() { if(map && myPos) map.setView([myPos.lat, myPos.lng], 16, { animate:true }); }
+function centerMap() {
+  if (map && myPos) {
+    map.setView([myPos.lat, myPos.lng], 16, { animate: true });
+  } else if (map) {
+    map.setView([40.4168, -3.7038], 13);
+  }
+}
 
 function toggleFull() {
-  fullscreen = !fullscreen;
-  document.getElementById('map-wrap').classList.toggle('fullscreen', fullscreen);
-  document.getElementById('btn-expand').textContent = fullscreen ? '✕' : '⛶';
-  setTimeout(()=> map && map.invalidateSize(), 250);
+  const wrap = document.getElementById('map-wrap');
+  wrap.classList.toggle('fullscreen');
+  const btn = document.getElementById('btn-expand');
+  btn.textContent = wrap.classList.contains('fullscreen') ? '✕' : '⛶';
+  if (map) setTimeout(() => map.invalidateSize(), 200);
 }
 
 // ═══════════════════════════════════════════════════════════════════
 // GPS
 // ═══════════════════════════════════════════════════════════════════
-function distMetros(a, b) {
-  const R = 6371000;
-  const dLat = (b.lat - a.lat) * Math.PI / 180;
-  const dLng = (b.lng - a.lng) * Math.PI / 180;
-  const sin2 = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
-  return R * 2 * Math.asin(Math.sqrt(sin2));
-}
-
 function startGPS() {
-  if(!navigator.geolocation){ setSt('GPS no disponible', false); return; }
-  setSt('Conectando GPS…', false);
-  watchId = navigator.geolocation.watchPosition(onPos, onGPSErr, { enableHighAccuracy:true, maximumAge:5000, timeout:15000 });
+  const status = document.getElementById('gps-status');
+  if (!navigator.geolocation) {
+    status.textContent = '⚠️ GPS no disponible. Usando Madrid centro.';
+    setDefaultPosition();
+    return;
+  }
+  status.textContent = '⏳ Obteniendo ubicación...';
+  watchId = navigator.geolocation.watchPosition(
+    pos => {
+      const { latitude, longitude } = pos.coords;
+      myPos = { lat: latitude, lng: longitude };
+      status.textContent = `📍 Ubicación obtenida (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+      updateMyMarker();
+      centerMap();
+      if (destPos) calcRoute();
+    },
+    err => {
+      console.warn('GPS error:', err);
+      status.textContent = '⚠️ No se pudo obtener GPS. Usando Madrid centro.';
+      setDefaultPosition();
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
 }
 
-function stopGPS() { if(watchId!=null){ navigator.geolocation.clearWatch(watchId); watchId=null; } }
+function setDefaultPosition() {
+  myPos = { lat: 40.4168, lng: -3.7038 };
+  document.getElementById('gps-status').textContent = '📍 Ubicación: Madrid (centro)';
+  updateMyMarker();
+  centerMap();
+  if (destPos) calcRoute();
+}
 
-function onPos(pos) {
-  const { latitude:lat, longitude:lng, accuracy:acc } = pos.coords;
-  const newPos = { lat, lng };
-  setSt('GPS activo · ±'+Math.round(acc)+' m', true);
-  const cm=document.getElementById('coords-mini');
-  cm.style.display='block'; cm.textContent='📍 '+lat.toFixed(6)+', '+lng.toFixed(6);
-  const ll=[lat,lng];
-  const icon = L.divIcon({ className:'', html:'<div class="my-dot"></div>', iconSize:[16,16], iconAnchor:[8,8] });
-  if(!myMarker){
-    myPos = newPos;
-    myMarker = L.marker(ll, { icon, zIndexOffset:1000 }).addTo(map).bindPopup('<b>Tu ubicación</b>', { closeButton:false });
-    accCircle = L.circle(ll, { radius:acc, color:'#4285f4', fillColor:'#4285f4', fillOpacity:.08, weight:1 }).addTo(map);
-    map.setView(ll, 15);
-    reverseGeocode(lat, lng).then(addr=>{
-      const inp = document.getElementById('orig-input');
-      if(!origPos && inp.value === '') inp.value = addr;
-      origName = addr;
-      actualizarChipsOrigen();
-      actualizarBotonSolicitar();
-    });
+function updateMyMarker() {
+  if (!map || !myPos) return;
+  const icon = L.divIcon({
+    html: '<div style="background:#4285f4;width:16px;height:16px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 4px rgba(66,133,244,0.3);"></div>',
+    iconSize: [16,16],
+    iconAnchor: [8,8]
+  });
+  if (!myMarker) {
+    myMarker = L.marker([myPos.lat, myPos.lng], { icon }).addTo(map);
   } else {
-    myMarker.setLatLng(ll);
-    accCircle.setLatLng(ll);
-    accCircle.setRadius(acc);
+    myMarker.setLatLng([myPos.lat, myPos.lng]);
   }
-  const moved = !lastMyPos || distMetros(lastMyPos, newPos) >= GPS_THRESHOLD_M;
-  myPos = newPos;
-  if(moved){
-    lastMyPos = newPos;
-    if(!origPos && destPos) scheduleFetchRoute();
-    actualizarChipsOrigen();
-    actualizarBotonSolicitar();
-  }
-  const now = Date.now();
-  if(now - lastSaved >= SAVE_MS && currentUser && currentUser.id !== 'demo-user'){
-    saveLocation(lat, lng, acc);
-    lastSaved = now;
-  }
-}
-
-async function reverseGeocode(lat, lng) {
-  try{
-    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=es`, { headers:{'User-Agent':'TaziApp/1.0'} });
-    const d = await r.json();
-    if(d.address){
-      const a = d.address;
-      const nombre = [a.road, a.house_number].filter(Boolean).join(' ') || d.display_name.split(',')[0];
-      origName = nombre;
-      return nombre;
-    }
-  } catch(e){}
-  return 'Mi ubicación';
-}
-
-function onGPSErr(e) { const m={1:'Permiso GPS denegado',2:'Ubicación no disponible',3:'Tiempo agotado'}; setSt(m[e.code]||'Error GPS', false); }
-function setSt(t, on) { document.getElementById('stext').textContent=t; document.getElementById('sdot').className='sdot'+(on?' on':''); }
-
-// ═══════════════════════════════════════════════════════════════════
-// BÚSQUEDA / AUTOCOMPLETAR
-// ═══════════════════════════════════════════════════════════════════
-let acTimer = null;
-function focusOrig() { acFocus='orig'; }
-function focusDest() { acFocus='dest'; }
-
-function onOrigSI() {
-  clearTimeout(acTimer);
-  const q=document.getElementById('orig-input').value.trim();
-  document.getElementById('btn-clear-orig').style.display=q?'block':'none';
-  if(q.length<3){ document.getElementById('ac-list').style.display='none'; return; }
-  acTimer=setTimeout(()=>fetchAC(q,'orig'), 350);
-}
-
-async function doOrigSearch() {
-  document.getElementById('ac-list').style.display='none';
-  const q=document.getElementById('orig-input').value.trim();
-  if(!q) return;
-  try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+' Madrid')}&format=json&limit=1&countrycodes=es`, { headers:{'Accept-Language':'es','User-Agent':'TaziApp/1.0'} });
-    const d=await r.json();
-    if(d.length) pickOrigAC(d[0].lat, d[0].lon, d[0].display_name);
-  } catch(e){ console.warn(e); }
-}
-
-function pickOrigAC(lat, lon, name) {
-  const label = name.split(',')[0];
-  document.getElementById('orig-input').value = label;
-  document.getElementById('btn-clear-orig').style.display='block';
-  document.getElementById('ac-list').style.display='none';
-  origPos = { lat: parseFloat(lat), lng: parseFloat(lon) };
-  origName = label;
-  const ll=[origPos.lat, origPos.lng];
-  const icon = L.divIcon({ className:'', html:'<div class="my-dot"></div>', iconSize:[16,16], iconAnchor:[8,8] });
-  if(myMarker){ myMarker.setLatLng(ll); if(accCircle) accCircle.setLatLng(ll); }
-  else { myMarker = L.marker(ll,{icon,zIndexOffset:1000}).addTo(map).bindPopup(`<b>${label}</b>`,{closeButton:false}); }
-  lastRouteKm = null;
-  actualizarChipsOrigen();
-  actualizarBotonSolicitar();
-  if(destPos) scheduleFetchRoute();
-}
-
-function clearOrig() {
-  document.getElementById('orig-input').value='';
-  document.getElementById('btn-clear-orig').style.display='none';
-  document.getElementById('ac-list').style.display='none';
-  origPos = null; origName = '';
-  if(myPos && myMarker){ myMarker.setLatLng([myPos.lat,myPos.lng]); if(accCircle) accCircle.setLatLng([myPos.lat,myPos.lng]); }
-  lastRouteKm = null;
-  actualizarChipsOrigen();
-  actualizarBotonSolicitar();
-  if(destPos) scheduleFetchRoute();
-}
-
-function onSI() {
-  clearTimeout(acTimer);
-  const q=document.getElementById('dest-input').value.trim();
-  document.getElementById('btn-clear').style.display=q?'block':'none';
-  if(q.length<3){ document.getElementById('ac-list').style.display='none'; return; }
-  acTimer=setTimeout(()=>fetchAC(q,'dest'), 350);
-}
-
-async function fetchAC(q, field) {
-  try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+' Madrid')}&format=json&limit=5&countrycodes=es&addressdetails=1`, { headers:{'Accept-Language':'es','User-Agent':'TaziApp/1.0'} });
-    showAC(await r.json(), field);
-  } catch(e){ console.warn(e); }
-}
-
-function showAC(res, field) {
-  const box=document.getElementById('ac-list');
-  if(!res.length){ box.style.display='none'; return; }
-  box.innerHTML = res.map(r=>{
-    const name = r.display_name.split(',')[0];
-    const sub = r.display_name.split(',').slice(1,3).join(',').trim();
-    const fn = field==='orig' ? 'pickOrigAC' : 'pickAC';
-    return `<div class="ac-item" onclick="${fn}(${r.lat},${r.lon},'${r.display_name.replace(/'/g,"\\'")}')"><span class="ac-ic">${field==='orig'?'🟢':'📍'}</span><div><div class="ac-name">${name}</div><div class="ac-sub">${sub}</div></div></div>`;
-  }).join('');
-  box.style.display='block';
-}
-
-async function doSearch() {
-  document.getElementById('ac-list').style.display='none';
-  const q=document.getElementById('dest-input').value.trim();
-  if(!q) return;
-  try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+' Madrid')}&format=json&limit=1&countrycodes=es`, { headers:{'Accept-Language':'es','User-Agent':'TaziApp/1.0'} });
-    const d=await r.json();
-    if(d.length) pickAC(d[0].lat, d[0].lon, d[0].display_name);
-  } catch(e){ console.warn(e); }
-}
-
-function pickAC(lat, lon, name) {
-  const label = name.split(',')[0];
-  document.getElementById('dest-input').value=label;
-  document.getElementById('ac-list').style.display='none';
-  document.getElementById('btn-clear').style.display='block';
-  destName = label;
-  setDest(parseFloat(lat), parseFloat(lon), label);
-}
-
-function clearDest() {
-  if(solicitudId) {
-    toast('No puedes cambiar el destino mientras hay una solicitud activa', 'error');
-    return;
-  }
-  document.getElementById('dest-input').value='';
-  document.getElementById('btn-clear').style.display='none';
-  document.getElementById('ac-list').style.display='none';
-  destPos=null; destName=''; routeKm=null; routeDurMin=null; lastRouteKm=null;
-  if(routeLayer){ map.removeLayer(routeLayer); routeLayer=null; }
-  if(destMarker){ map.removeLayer(destMarker); destMarker=null; }
-  document.getElementById('no-dest').style.display='';
-  document.getElementById('route-card').style.display='none';
-  document.getElementById('tarifa-section').style.display='none';
-  document.getElementById('route-loading').style.display='none';
-  document.getElementById('price-card').style.display='none';
-  if(routeFetchTimeout){ clearTimeout(routeFetchTimeout); routeFetchTimeout=null; }
-  fetchingRoute=false; isFlying=false;
-  actualizarBotonSolicitar();
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// DESTINO
+// BÚSQUEDA
 // ═══════════════════════════════════════════════════════════════════
-let destMarker = null;
-function setDest(lat, lng, name) {
-  if(solicitudId) {
-    toast('No puedes cambiar el destino mientras hay una solicitud activa', 'error');
-    return;
-  }
+function doSearch() {
+  const destInput = document.getElementById('dest-input').value.trim();
+  if (!destInput) return;
+  let lat = 40.4168, lng = -3.7038;
+  const text = destInput.toLowerCase();
+  if (text.includes('sol')) { lat = 40.4170; lng = -3.7030; }
+  else if (text.includes('atocha')) { lat = 40.4060; lng = -3.6897; }
+  else if (text.includes('chamartín')) { lat = 40.4729; lng = -3.6823; }
+  else if (text.includes('aeropuerto') || text.includes('barajas')) { lat = 40.4722; lng = -3.5604; }
+  else if (text.includes('retiro')) { lat = 40.4150; lng = -3.6830; }
+  destName = destInput;
   destPos = { lat, lng };
-  destName = name;
-  const pin=`<svg width="26" height="36" viewBox="0 0 26 36" fill="none"><path d="M13 0C5.82 0 0 5.82 0 13c0 9.1 13 23 13 23S26 22.1 26 13C26 5.82 20.18 0 13 0z" fill="#ea4335"/><circle cx="13" cy="13" r="5.5" fill="white"/></svg>`;
-  const icon=L.divIcon({ className:'', html:pin, iconSize:[26,36], iconAnchor:[13,36] });
-  if(destMarker){ destMarker.setLatLng([lat,lng]); }
-  else { destMarker = L.marker([lat,lng], { icon }).addTo(map); }
-  destMarker.bindPopup(`<b>${name}</b>`).openPopup();
-  if(!myPos) map.setView([lat,lng], 14);
-  actualizarChipsOrigen();
-  actualizarBotonSolicitar();
-  scheduleFetchRoute();
+  updateDestMarker();
+  calcRoute();
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// RUTA OSRM
-// ═══════════════════════════════════════════════════════════════════
-function scheduleFetchRoute() {
-  if(solicitudId) return; // no recalcular mientras haya solicitud
-  if(routeFetchTimeout) clearTimeout(routeFetchTimeout);
-  routeFetchTimeout = setTimeout(()=>{ routeFetchTimeout=null; fetchRoute(); }, 300);
-}
-
-async function fetchRoute() {
-  if(solicitudId) return;
-  const origen = origPos || myPos;
-  if(!origen || !destPos) return;
-  if(fetchingRoute) return;
-  fetchingRoute = true;
-
-  const isFirstLoad = (lastRouteKm === null);
-  if(isFirstLoad){
-    document.getElementById('no-dest').style.display='none';
-    document.getElementById('route-card').style.display='none';
-    document.getElementById('tarifa-section').style.display='none';
-    document.getElementById('price-card').style.display='none';
-    document.getElementById('route-loading').style.display='block';
-  }
-
-  try{
-    const url = `https://router.project-osrm.org/route/v1/driving/${origen.lng},${origen.lat};${destPos.lng},${destPos.lat}?overview=full&geometries=geojson`;
-    const d = await (await fetch(url)).json();
-    if(d.code!=='Ok' || !d.routes?.length) throw new Error('Sin ruta');
-    const route = d.routes[0];
-    const newKm = route.distance / 1000;
-
-    if(lastRouteKm !== null && Math.abs(newKm - lastRouteKm) < 0.05){
-      routeDurMin = Math.round(route.duration/60);
-      document.getElementById('route-time').textContent = '~'+routeDurMin+' min';
-      calcPrice();
-      fetchingRoute = false;
-      actualizarBotonSolicitar();
-      return;
-    }
-
-    lastRouteKm = newKm;
-    routeKm = newKm;
-    routeDurMin = Math.round(route.duration/60);
-
-    const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
-    if(routeLayer){ routeLayer.setLatLngs(coords); }
-    else { routeLayer = L.polyline(coords, { color:'#1a73e8', weight:5, opacity:.8 }).addTo(map); }
-
-    const bounds = routeLayer.getBounds();
-    const mapBounds = map.getBounds();
-    if(!mapBounds.contains(bounds) || map.getZoom() < 13){
-      if(!isFlying){
-        isFlying = true;
-        map.flyToBounds(bounds, { padding:[60,60], duration:.8, easeLinearity:.25 });
-        setTimeout(()=>{ isFlying=false; }, 1000);
-      }
-    }
-
-    document.getElementById('route-loading').style.display='none';
-    document.getElementById('route-card').style.display='block';
-    document.getElementById('tarifa-section').style.display='block';
-    document.getElementById('route-km').textContent = routeKm.toFixed(1)+' km por carretera';
-    document.getElementById('route-time').textContent = '~'+routeDurMin+' min';
-    calcPrice();
-    actualizarBotonSolicitar();
-  } catch(e){
-    console.warn('OSRM:', e);
-    document.getElementById('route-loading').style.display='none';
-    document.getElementById('route-card').style.display='block';
-    document.getElementById('route-km').textContent = 'Ruta no disponible';
-    document.getElementById('route-time').textContent = '—';
-  } finally {
-    fetchingRoute = false;
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// CHIPS SEGÚN ORIGEN
-// ═══════════════════════════════════════════════════════════════════
-function actualizarChipsOrigen() {
-  const tipo = detectarOrigen();
-  const chips = document.querySelectorAll('.chip');
-  chips.forEach(c => c.classList.add('hidden'));
-
-  let tarifaPorDefecto = 't1';
-  if (tipo === 'aeropuerto') {
-    document.querySelector('.chip[data-key="t4"]').classList.remove('hidden');
-    document.querySelector('.chip[data-key="t3"]').classList.remove('hidden');
-    const centroM30 = { lat: 40.4168, lng: -3.7038 };
-    tarifaPorDefecto = (destPos && distanciaKm(destPos, centroM30) <= 8) ? 't4' : 't3';
-  } else if (tipo === 'estacion') {
-    document.querySelector('.chip[data-key="t7"]').classList.remove('hidden');
-    tarifaPorDefecto = 't7';
+function updateDestMarker() {
+  if (!map || !destPos) return;
+  const pin = `<svg width="26" height="36" viewBox="0 0 26 36"><path d="M13 0C5.82 0 0 5.82 0 13c0 9.1 13 23 13 23S26 22.1 26 13C26 5.82 20.18 0 13 0z" fill="#ea4335"/><circle cx="13" cy="13" r="5.5" fill="white"/></svg>`;
+  const icon = L.divIcon({ html: pin, iconSize: [26,36], iconAnchor: [13,36] });
+  if (!destMarker) {
+    destMarker = L.marker([destPos.lat, destPos.lng], { icon }).addTo(map);
   } else {
-    document.querySelector('.chip[data-key="t1"]').classList.remove('hidden');
-    document.querySelector('.chip[data-key="t2"]').classList.remove('hidden');
-    tarifaPorDefecto = esHorarioDiurno() ? 't1' : 't2';
+    destMarker.setLatLng([destPos.lat, destPos.lng]);
   }
+  destMarker.bindPopup(`<b>${destName}</b>`).openPopup();
+}
 
-  const chipActivo = document.querySelector(`.chip[data-key="${tarifaPorDefecto}"]`);
-  if (chipActivo) {
-    document.querySelectorAll('.chip.active').forEach(c => c.classList.remove('active'));
-    chipActivo.classList.add('active');
-    tarifaKey = tarifaPorDefecto;
-    if (routeKm != null) calcPrice();
-  }
+function clearOrig() {}
+function clearDest() {
+  document.getElementById('dest-input').value = '';
+  destPos = null;
+  if (destMarker) { map.removeLayer(destMarker); destMarker = null; }
+  if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+  document.getElementById('route-card').style.display = 'none';
+  document.getElementById('tarifa-section').style.display = 'none';
+  document.getElementById('solicitar-section').style.display = 'none';
+  document.getElementById('price-card').style.display = 'none';
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// CÁLCULO DE PRECIO
+// CÁLCULO DE RUTA Y PRECIO
 // ═══════════════════════════════════════════════════════════════════
-function esHorarioDiurno() {
-  const ahora = new Date();
-  const dia = ahora.getDay();
-  const hora = ahora.getHours() + ahora.getMinutes()/60;
-  const esFinDeSemana = (dia === 0 || dia === 6);
-  return !esFinDeSemana && (hora >= 7 && hora < 21);
+function calcRoute() {
+  if (!myPos || !destPos) return;
+  const R = 6371;
+  const dLat = (destPos.lat - myPos.lat) * Math.PI / 180;
+  const dLng = (destPos.lng - myPos.lng) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(myPos.lat*Math.PI/180)*Math.cos(destPos.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+  const dist = R * 2 * Math.asin(Math.sqrt(a));
+  routeKm = dist * 1.3;
+  const tiempo = Math.round((routeKm / 30) * 60);
+
+  if (routeLayer) { map.removeLayer(routeLayer); }
+  routeLayer = L.polyline([[myPos.lat, myPos.lng], [destPos.lat, destPos.lng]], {
+    color: '#1a73e8', weight: 4, opacity: 0.8
+  }).addTo(map);
+
+  document.getElementById('route-card').style.display = 'block';
+  document.getElementById('route-km').textContent = routeKm.toFixed(1) + ' km por carretera';
+  document.getElementById('route-time').textContent = '~' + tiempo + ' min';
+  document.getElementById('tarifa-section').style.display = 'block';
+  document.getElementById('solicitar-section').style.display = 'block';
+  calcPrice();
 }
 
 function setTarifa(key, el) {
   tarifaKey = key;
-  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
-  if(routeKm != null) calcPrice();
+  if (routeKm) calcPrice();
 }
-
-function fmt(n) { return n.toFixed(2)+' €'; }
-
-function setHTML(el, html) { if(el.innerHTML !== html) el.innerHTML = html; }
 
 function calcPrice() {
-  if(routeKm == null) return;
   const t = TARIFAS[tarifaKey];
-  const pc = document.getElementById('price-card');
-  pc.style.display = 'block';
-
-  if(t.tipo === 'fijo'){
-    setHTML(pc, `
-      <div class="price-fixed">
-        <div class="pf-label">Precio fijo · Sin suplementos</div>
-        <div class="pf-main">${fmt(t.precio_fijo)}</div>
-        <div class="pf-desc">${t.nota}</div>
-        <div class="pf-badge">${t.id} · ${t.horario}</div>
-      </div>
-      <p class="info-note">Tarifa fija oficial. No aplica recargo por equipaje, nº de pasajeros, noche ni festivo.</p>`);
-    return;
-  }
-
-  if(t.tipo === 'minimo_luego_metro'){
-    const esDiurno = esHorarioDiurno();
-    const kmTarifa = esDiurno ? t.km_t1 : t.km_t2;
-    const nombreTarifa = esDiurno ? 'T1 (diurna)' : 'T2 (nocturna/festivo)';
-    let precio;
-    if(routeKm <= t.franquicia_km){
-      precio = t.minimo;
-    } else {
-      const kmExtra = routeKm - t.franquicia_km;
-      precio = t.minimo + (kmExtra * kmTarifa);
-    }
-    const kmExtra = Math.max(0, routeKm - t.franquicia_km);
-    setHTML(pc, `
-      <div class="price-meter">
-        <div class="pm-left"><div class="pm-label">Precio estimado</div><div class="pm-main">${fmt(precio)}</div></div>
-        <div class="pm-right"><div class="pm-tag">T3</div></div>
-      </div>
-      <div class="tarifa-explain">
-        <div class="te-title">📋 Cómo se calcula T3</div>
-        <div class="te-row"><span>Mínimo (primeros ${t.franquicia_km} km)</span><span class="te-val">22,00 €</span></div>
-        ${kmExtra > 0 ? `<div class="te-row"><span>Km extra (${kmExtra.toFixed(1)} km × ${kmTarifa.toFixed(2)} €/km)</span><span class="te-val">${fmt(kmExtra * kmTarifa)}</span></div>` : ''}
-        <div class="te-row"><span>Total estimado</span><span class="te-val">${fmt(precio)}</span></div>
-      </div>
-      <p class="info-note">El exceso se calcula con ${nombreTarifa} según la hora actual.</p>`);
-    return;
-  }
-
-  if(t.tipo === 'salida_especial'){
-    const esDiurno = esHorarioDiurno();
-    const kmTarifa = esDiurno ? t.km : t.km_noche;
-    const nombreTarifa = esDiurno ? 'T1 (diurna)' : 'T2 (nocturna/festivo)';
-    const franquicia_km = t.franquicia_m / 1000;
-    const kmExtra = Math.max(0, routeKm - franquicia_km);
-    const precio = t.salida + (kmExtra * kmTarifa);
-    setHTML(pc, `
-      <div class="price-meter">
-        <div class="pm-left"><div class="pm-label">Precio estimado</div><div class="pm-main">${fmt(precio)}</div></div>
-        <div class="pm-right"><div class="pm-tag">T7</div></div>
-      </div>
-      <div class="tarifa-explain">
-        <div class="te-title">🚉 Cómo se calcula T7</div>
-        <div class="te-row"><span>Salida (incluye primeros ${franquicia_km.toFixed(2)} km)</span><span class="te-val">8,00 €</span></div>
-        ${kmExtra > 0 ? `<div class="te-row"><span>Km extra (${kmExtra.toFixed(2)} km × ${kmTarifa.toFixed(2)} €/km)</span><span class="te-val">${fmt(kmExtra * kmTarifa)}</span></div>` : '<div class="te-row"><span>Dentro de la franquicia</span><span class="te-val">0,00 €</span></div>'}
-        <div class="te-row"><span>Total estimado</span><span class="te-val">${fmt(precio)}</span></div>
-      </div>
-      <p class="info-note">Salida desde: Atocha · Chamartín · Av. América · Méndez Álvaro · IFEMA.<br/>El exceso se calcula con ${nombreTarifa} según la hora actual.</p>`);
-    return;
-  }
-
-  // T1 / T2
-  let precio = t.bandera + (routeKm * t.km);
-  precio = Math.max(precio, t.min);
-  setHTML(pc, `
-    <div class="price-meter">
-      <div class="pm-left"><div class="pm-label">Precio estimado</div><div class="pm-main">${fmt(precio)}</div></div>
-      <div class="pm-right"><div class="pm-tag">${t.id}</div></div>
-    </div>
-    <div class="price-grid">
-      <div class="pg-item"><div class="pg-val">${fmt(t.bandera)}</div><div class="pg-key">Bajada de bandera</div></div>
-      <div class="pg-item"><div class="pg-val">${t.km.toFixed(2)} €</div><div class="pg-key">Por km</div></div>
-      <div class="pg-item"><div class="pg-val">${fmt(t.min)}</div><div class="pg-key">Mínimo</div></div>
-    </div>
-    <div class="tarifa-explain">
-      <div class="te-title">📋 ${t.id} · ${t.nombre}</div>
-      <div class="te-row"><span>${t.horario}</span></div>
-      <div class="te-row"><span>Bandera + ${routeKm.toFixed(1)} km × ${t.km.toFixed(2)} €/km</span><span class="te-val">${fmt(precio)}</span></div>
-    </div>
-    <p class="info-note">Tarifas oficiales Ayuntamiento de Madrid 2026.<br/>Suplementos no incluidos: recogida app (máx. 5 €), Nochebuena/Nochevieja (7 €).</p>`);
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// SOLICITAR TAXI (con Supabase y temporizadores)
-// ═══════════════════════════════════════════════════════════════════
-function obtenerPrecioActual() {
-  const pmMain = document.querySelector('.pm-main');
-  if (pmMain) {
-    const texto = pmMain.textContent.replace(' €', '').replace(',', '.');
-    return parseFloat(texto) || 0;
-  }
-  return 0;
-}
-
-function actualizarBotonSolicitar() {
-  const section = document.getElementById('solicitar-section');
-  const btn = document.getElementById('btn-solicitar');
-  const feedback = document.getElementById('solicitar-feedback');
-
-  // Si hay solicitud activa, mostramos el estado y cancelación
-  if (solicitudId) {
-    section.style.display = 'block';
-    btn.style.display = 'none';
-    feedback.style.display = 'block';
-    return;
-  }
-
-  btn.style.display = 'block';
-  feedback.style.display = 'none';
-  const origen = origPos || myPos;
-  const destino = destPos;
-  if (origen && destino && routeKm !== null && currentUser) {
-    section.style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = '🚖 Solicitar taxi';
+  let precio = 0;
+  if (t.tipo === 'fijo') {
+    precio = t.precio_fijo;
+  } else if (t.tipo === 'minimo') {
+    precio = routeKm <= t.franquicia ? t.minimo : t.minimo + (routeKm - t.franquicia) * 1.40;
+  } else if (t.tipo === 'salida') {
+    const kmExtra = Math.max(0, routeKm - (t.franquicia_m));
+    precio = t.salida + kmExtra * 1.40;
   } else {
-    section.style.display = 'none';
+    precio = t.bandera + routeKm * t.km;
+    precio = Math.max(precio, t.min);
   }
+  document.getElementById('price-card').style.display = 'block';
+  document.getElementById('precio-main').textContent = precio.toFixed(2) + ' €';
+  document.getElementById('tarifa-tag').textContent = t.id;
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// SOLICITAR TAXI (con Supabase)
+// ═══════════════════════════════════════════════════════════════════
 function resetSolicitud() {
-  // Limpiar temporizadores y canales
-  if (solicitudTimer) {
-    clearTimeout(solicitudTimer);
-    solicitudTimer = null;
-  }
-  if (solicitudChannel) {
-    sb.removeChannel(solicitudChannel);
-    solicitudChannel = null;
-  }
+  if (solicitudTimer) { clearInterval(solicitudTimer); solicitudTimer = null; }
+  if (solicitudChannel) { sb?.removeChannel(solicitudChannel); solicitudChannel = null; }
   solicitudId = null;
   solicitudAceptada = false;
   solicitudAceptadaTimestamp = null;
   solicitudPendingCancel = false;
   // Restaurar UI
-  actualizarBotonSolicitar();
+  const feedback = document.getElementById('solicitar-feedback');
+  feedback.style.display = 'none';
+  const btn = document.querySelector('.btn-solicitar');
+  btn.disabled = false;
+  btn.textContent = '🚖 Solicitar taxi';
+  const cancelBtn = feedback.querySelector('.btn-cancelar');
+  cancelBtn.style.display = 'none';
 }
 
-let solicitudEnProgreso = false;
-
 async function solicitarTaxi() {
-  const origen = origPos || myPos;
-  const destino = destPos;
-  if (!origen || !destino) {
-    toast('Primero define origen y destino.', 'error');
+  if (!myPos || !destPos) {
+    alert('Primero define origen y destino.');
     return;
   }
-  if (solicitudEnProgreso) return;
-  if (!supabaseReady) {
-    toast('Supabase no disponible', 'error');
-    return;
-  }
-  if (!currentUser || currentUser.id === 'demo-user') {
-    toast('Inicia sesión para solicitar un taxi', 'error');
+  if (!currentUser) {
+    alert('Inicia sesión primero.');
     return;
   }
 
-  solicitudEnProgreso = true;
-  const btn = document.getElementById('btn-solicitar');
+  const btn = document.querySelector('.btn-solicitar');
   const feedback = document.getElementById('solicitar-feedback');
-  const estadoSpan = document.getElementById('solicitar-estado');
+  const estado = document.getElementById('solicitar-estado');
+  const cancelBtn = feedback.querySelector('.btn-cancelar');
 
   btn.disabled = true;
   btn.textContent = '⏳ Enviando...';
   feedback.style.display = 'block';
-  estadoSpan.textContent = '⏳ Enviando solicitud...';
-  estadoSpan.className = 'estado esperando';
+  estado.textContent = '⏳ Enviando solicitud...';
+  estado.style.color = '#fbbc04';
+  cancelBtn.style.display = 'none';
 
-  const precio = obtenerPrecioActual();
+  const precio = parseFloat(document.getElementById('precio-main').textContent.replace(' €', '').replace(',', '.'));
 
   const solicitud = {
     usuario_id: currentUser.id,
-    origen_lat: origen.lat,
-    origen_lng: origen.lng,
+    origen_lat: myPos.lat,
+    origen_lng: myPos.lng,
     origen_nombre: origName || 'Mi ubicación',
-    destino_lat: destino.lat,
-    destino_lng: destino.lng,
+    destino_lat: destPos.lat,
+    destino_lng: destPos.lng,
     destino_nombre: destName || 'Destino',
     precio: precio,
     tarifa_key: tarifaKey,
@@ -1325,58 +637,80 @@ async function solicitarTaxi() {
   };
 
   try {
-    const { data, error } = await sb
-      .from('solicitudes')
-      .insert(solicitud)
-      .select()
-      .single();
-
+    let data, error;
+    if (supabaseReady && sb) {
+      const result = await sb.from('solicitudes').insert(solicitud).select().single();
+      data = result.data;
+      error = result.error;
+    } else {
+      // Modo local: simular
+      await new Promise(r => setTimeout(r, 500));
+      data = { id: Date.now(), ...solicitud };
+      error = null;
+    }
     if (error) throw error;
 
     solicitudId = data.id;
-    estadoSpan.textContent = '⏳ Esperando conductor... (puedes cancelar en 10s)';
-    estadoSpan.className = 'estado esperando';
-    btn.style.display = 'none';
-    toast('Solicitud enviada. Esperando conductor...', 'success');
+    estado.textContent = '⏳ Esperando conductor... (puedes cancelar en 10s)';
+    estado.style.color = '#fbbc04';
+    btn.textContent = '⏳ Esperando...';
+    cancelBtn.style.display = 'inline-block';
 
-    // Iniciar temporizador de 10s para cancelación sin penalización
-    let segundosRestantes = 10;
-    const timerInterval = setInterval(() => {
-      segundosRestantes--;
-      if (segundosRestantes > 0) {
-        estadoSpan.textContent = `⏳ Esperando conductor... (puedes cancelar en ${segundosRestantes}s)`;
+    // Iniciar temporizador de 10s
+    let segundos = 10;
+    solicitudTimer = setInterval(() => {
+      segundos--;
+      if (segundos > 0) {
+        estado.textContent = `⏳ Esperando conductor... (puedes cancelar en ${segundos}s)`;
       } else {
-        clearInterval(timerInterval);
-        estadoSpan.textContent = '⏳ Esperando conductor...';
-        // Ya puede cancelar, pero sin penalización hasta que sea aceptado
-        // Pero mantenemos la opción de cancelar (sin cargo hasta que sea aceptado)
+        clearInterval(solicitudTimer);
+        solicitudTimer = null;
+        estado.textContent = '⏳ Esperando conductor...';
       }
     }, 1000);
 
-    // Guardar referencia del intervalo para limpiar después
-    solicitudTimer = timerInterval;
-
-    // Suscribirse a cambios
-    suscribirSolicitud(solicitudId);
+    // Suscribirse a cambios (solo si Supabase está disponible)
+    if (supabaseReady && sb) {
+      suscribirSolicitud(solicitudId);
+    } else {
+      // Simular aceptación después de 10s
+      setTimeout(() => {
+        if (solicitudId) {
+          estado.textContent = '✅ Taxi aceptado! Tienes 2 minutos para cancelar sin cargo.';
+          estado.style.color = '#34a853';
+          solicitudAceptada = true;
+          solicitudAceptadaTimestamp = Date.now();
+          btn.textContent = '✅ Taxi en camino';
+          // Iniciar temporizador de 2 minutos
+          let segundos2 = 120;
+          solicitudTimer = setInterval(() => {
+            segundos2--;
+            if (segundos2 > 0) {
+              estado.textContent = `✅ Taxi aceptado. Puedes cancelar sin cargo en ${segundos2}s`;
+            } else {
+              clearInterval(solicitudTimer);
+              solicitudTimer = null;
+              estado.textContent = '⏳ Viaje en progreso. Si cancelas tendrás un cargo de 5€.';
+              estado.style.color = '#fbbc04';
+            }
+          }, 1000);
+        }
+      }, 10000);
+    }
 
   } catch (err) {
     console.error('Error al solicitar taxi:', err);
-    estadoSpan.textContent = '❌ ' + err.message;
-    estadoSpan.className = 'estado error';
-    btn.style.display = 'block';
+    estado.textContent = '❌ Error: ' + err.message;
+    estado.style.color = '#f87171';
     btn.disabled = false;
     btn.textContent = '🔄 Reintentar';
-    toast('Error al solicitar taxi.', 'error');
-  } finally {
-    solicitudEnProgreso = false;
+    cancelBtn.style.display = 'none';
   }
 }
 
 function suscribirSolicitud(id) {
-  if (solicitudChannel) {
-    sb.removeChannel(solicitudChannel);
-  }
-
+  if (!sb) return;
+  if (solicitudChannel) sb.removeChannel(solicitudChannel);
   solicitudChannel = sb.channel(`solicitud-${id}`);
   solicitudChannel.on(
     'postgres_changes',
@@ -1388,47 +722,35 @@ function suscribirSolicitud(id) {
     },
     (payload) => {
       const nueva = payload.new;
-      const estadoSpan = document.getElementById('solicitar-estado');
-
+      const estado = document.getElementById('solicitar-estado');
+      const btn = document.querySelector('.btn-solicitar');
       if (nueva.estado === 'aceptado' && nueva.conductor_id) {
-        // Conductor aceptó
         solicitudAceptada = true;
         solicitudAceptadaTimestamp = Date.now();
-        estadoSpan.textContent = '✅ Taxi aceptado. Tienes 2 minutos para cancelar sin cargo.';
-        estadoSpan.className = 'estado aceptado';
-        toast('✅ Un conductor ha aceptado tu taxi!', 'success');
-
-        // Iniciar temporizador de 2 minutos para cancelación sin cargo
-        if (solicitudTimer) {
-          clearInterval(solicitudTimer);
-        }
-        let segundosRestantes = 120;
+        estado.textContent = '✅ Taxi aceptado! Tienes 2 minutos para cancelar sin cargo.';
+        estado.style.color = '#34a853';
+        btn.textContent = '✅ Taxi en camino';
+        if (solicitudTimer) clearInterval(solicitudTimer);
+        let segundos2 = 120;
         solicitudTimer = setInterval(() => {
-          segundosRestantes--;
-          if (segundosRestantes > 0) {
-            estadoSpan.textContent = `✅ Taxi aceptado. Puedes cancelar sin cargo en ${segundosRestantes}s`;
+          segundos2--;
+          if (segundos2 > 0) {
+            estado.textContent = `✅ Taxi aceptado. Puedes cancelar sin cargo en ${segundos2}s`;
           } else {
             clearInterval(solicitudTimer);
             solicitudTimer = null;
-            estadoSpan.textContent = '⏳ Viaje en progreso. Si cancelas tendrás un cargo de 5€.';
-            estadoSpan.className = 'estado esperando';
-            // A partir de aquí, cancelar implica cargo
+            estado.textContent = '⏳ Viaje en progreso. Si cancelas tendrás un cargo de 5€.';
+            estado.style.color = '#fbbc04';
           }
         }, 1000);
-
-        // Cargar info del conductor
+        // Cargar conductor
         cargarConductor(nueva.conductor_id);
-
       } else if (nueva.estado === 'cancelado') {
-        toast('❌ La solicitud fue cancelada', 'error');
         resetSolicitud();
-        actualizarBotonSolicitar();
       } else if (nueva.estado === 'completado') {
-        toast('✅ Viaje completado. ¡Gracias por usar Tazi!', 'success');
-        estadoSpan.textContent = '✅ Viaje completado';
-        estadoSpan.className = 'estado aceptado';
-        resetSolicitud();
-        actualizarBotonSolicitar();
+        estado.textContent = '✅ Viaje completado';
+        estado.style.color = '#34a853';
+        setTimeout(resetSolicitud, 3000);
       }
     }
   ).subscribe();
@@ -1436,32 +758,22 @@ function suscribirSolicitud(id) {
 
 async function cargarConductor(conductorId) {
   try {
-    const { data, error } = await sb
-      .from('perfiles')
-      .select('nombre, telefono, vehiculo')
-      .eq('id', conductorId)
-      .single();
+    const { data, error } = await sb.from('perfiles').select('nombre, vehiculo').eq('id', conductorId).single();
     if (!error && data) {
-      const estadoSpan = document.getElementById('solicitar-estado');
-      estadoSpan.innerHTML += `<br/>🚗 Conductor: ${data.nombre || 'Anónimo'} · ${data.vehiculo || ''}`;
+      const estado = document.getElementById('solicitar-estado');
+      estado.innerHTML += `<br/>🚗 Conductor: ${data.nombre || 'Anónimo'} · ${data.vehiculo || ''}`;
     }
-  } catch (e) {
-    console.warn('Error cargando conductor:', e);
-  }
+  } catch(e) {}
 }
 
 // ── Cancelar solicitud ──
 function cancelarSolicitud() {
   if (!solicitudId) return;
-
-  const estadoSpan = document.getElementById('solicitar-estado');
   const ahora = Date.now();
-
-  // Si la solicitud fue aceptada y ha pasado más de 2 minutos (120000 ms)
   if (solicitudAceptada && solicitudAceptadaTimestamp) {
     const tiempoTranscurrido = ahora - solicitudAceptadaTimestamp;
     if (tiempoTranscurrido > 120000) {
-      // Mostrar modal de advertencia de cargo
+      // Mostrar modal de cargo
       document.getElementById('cancel-modal-msg').innerHTML =
         '⚠️ Han pasado más de 2 minutos desde que el conductor aceptó.<br/><strong>Si cancelas ahora, se te aplicará un cargo de 5,00 €.</strong><br/>¿Deseas continuar?';
       document.getElementById('cancel-modal').classList.add('show');
@@ -1469,8 +781,6 @@ function cancelarSolicitud() {
       return;
     }
   }
-
-  // Si no ha pasado el tiempo o no ha sido aceptada, cancelar directamente
   ejecutarCancelacion();
 }
 
@@ -1489,51 +799,29 @@ function confirmarCancelacion() {
 
 async function ejecutarCancelacion() {
   if (!solicitudId) return;
-
   try {
-    const { error } = await sb
-      .from('solicitudes')
-      .update({
-        estado: 'cancelado',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', solicitudId);
-
-    if (error) throw error;
-    toast('Solicitud cancelada', 'error');
+    if (supabaseReady && sb) {
+      await sb.from('solicitudes').update({ estado: 'cancelado' }).eq('id', solicitudId);
+    }
     resetSolicitud();
-    actualizarBotonSolicitar();
-  } catch (err) {
-    toast('Error al cancelar: ' + err.message, 'error');
+    alert('Solicitud cancelada.');
+  } catch(err) {
+    alert('Error al cancelar: ' + err.message);
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// GUARDAR UBICACIÓN
+// LOGOUT
 // ═══════════════════════════════════════════════════════════════════
-async function saveLocation(lat, lng, acc) {
-  if(!currentUser || currentUser.id === 'demo-user') return;
-  if(!supabaseReady) return;
-  try{
-    await sb.from('locations').insert({ user_id:currentUser.id, latitude:lat, longitude:lng, accuracy:acc, recorded_at:new Date().toISOString() });
-  } catch(e){ console.warn('save:', e.message); }
-}
-
-// Cerrar autocomplete al tocar fuera
-document.addEventListener('click', e=>{
-  if(!e.target.closest('#search-bar')) document.getElementById('ac-list').style.display='none';
-});
-
-// ═══════════════════════════════════════════════════════════════════
-// SERVICE WORKER (PWA)
-// ═══════════════════════════════════════════════════════════════════
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/Tazi/sw.js')
-      .then(() => console.log('SW registrado correctamente'))
-      .catch(err => console.warn('SW error:', err));
-  });
+function doLogout() {
+  if (watchId) navigator.geolocation.clearWatch(watchId);
+  if (solicitudChannel) sb?.removeChannel(solicitudChannel);
+  currentUser = null;
+  resetSolicitud();
+  document.getElementById('map-screen').classList.remove('active');
+  document.getElementById('auth-screen').style.display = 'flex';
+  if (map) { map.remove(); map = null; myMarker = null; destMarker = null; routeLayer = null; }
 }
 </script>
 </body>
-  </html>
+</html>
