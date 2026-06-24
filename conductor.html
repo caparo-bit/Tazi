@@ -7,151 +7,58 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      font-family: 'Inter', sans-serif;
-      background: #0f1117;
-      color: #e8e8f0;
-      height: 100vh;
-      overflow: hidden;
-    }
+    body { font-family: 'Inter', sans-serif; background: #0f1117; color: #e8e8f0; height: 100vh; overflow: hidden; }
 
-    /* ── Login ── */
     #login-screen {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      padding: 1.5rem;
-      background: #0f1117;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 100vh; padding: 1.5rem; background: #0f1117;
     }
-    #login-screen h1 {
-      font-size: 2rem;
-      color: #3ecf8e;
-      margin-bottom: 1rem;
-    }
+    #login-screen h1 { font-size: 2rem; color: #3ecf8e; margin-bottom: 1rem; }
     #login-screen input {
-      padding: 0.8rem 1rem;
-      border-radius: 10px;
-      border: 1px solid #2a2a45;
-      background: rgba(255,255,255,0.05);
-      color: white;
-      width: 280px;
-      font-size: 1rem;
-      margin-bottom: 0.8rem;
+      padding: 0.8rem 1rem; border-radius: 10px; border: 1px solid #2a2a45;
+      background: rgba(255,255,255,0.05); color: white; width: 280px; font-size: 1rem; margin-bottom: 0.8rem;
     }
     #login-screen button {
-      padding: 0.8rem 2rem;
-      border-radius: 10px;
-      background: #3ecf8e;
-      color: #0f1117;
-      font-weight: 700;
-      border: none;
-      cursor: pointer;
-      width: 280px;
-      font-size: 1rem;
+      padding: 0.8rem; border-radius: 10px; background: #3ecf8e; color: #0f1117;
+      font-weight: 700; border: none; cursor: pointer; width: 280px; font-size: 1rem;
     }
     #login-screen .error { color: #f87171; font-size: 0.9rem; margin-top: 0.5rem; }
+    #login-screen .link { color: #3ecf8e; cursor: pointer; }
 
-    /* ── App principal ── */
-    #app-main {
-      display: none;
-      flex-direction: column;
-      height: 100vh;
-      background: #1a1a2e;
-    }
+    #app-main { display: none; flex-direction: column; height: 100vh; background: #1a1a2e; }
     #map { height: 45vh; width: 100%; background: #0f1117; }
-    #solicitudes-container {
-      flex: 1;
-      overflow-y: auto;
-      padding: 0.8rem 1rem 1rem;
-      background: #1a1a2e;
-    }
+    #solicitudes-container { flex: 1; overflow-y: auto; padding: 0.8rem 1rem; }
     .solicitud-card {
-      background: #2a2a45;
-      border-radius: 14px;
-      padding: 0.8rem 1rem;
-      margin-bottom: 0.8rem;
+      background: #2a2a45; border-radius: 14px; padding: 0.8rem 1rem; margin-bottom: 0.8rem;
       border: 1px solid #3a3a5a;
-      transition: background 0.2s;
     }
-    .solicitud-card:hover { background: #2f2f4f; }
-    .solicitud-card .info {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.4rem 0.8rem;
-      font-size: 0.9rem;
-    }
-    .solicitud-card .origen-destino { flex: 1; font-weight: 500; }
+    .solicitud-card .info { display: flex; flex-wrap: wrap; gap: 0.4rem 0.8rem; font-size: 0.9rem; }
     .solicitud-card .precio { color: #fbbc04; font-weight: 700; }
-    .solicitud-card .distancia { color: #34a853; font-size: 0.85rem; }
-    .solicitud-card .tiempo { color: #9aa0a6; font-size: 0.8rem; }
-    .solicitud-card .acciones { margin-top: 0.5rem; display: flex; gap: 0.5rem; }
-    .solicitud-card .acciones button {
-      background: #34a853;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      padding: 0.3rem 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
+    .solicitud-card .distancia { color: #34a853; }
+    .solicitud-card .btn-aceptar {
+      background: #34a853; color: white; border: none; border-radius: 8px;
+      padding: 0.3rem 1rem; font-weight: 600; cursor: pointer; margin-top: 0.4rem;
     }
-    .solicitud-card .acciones button:hover { background: #2d9248; }
-    .solicitud-card .acciones button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .solicitud-card .badge {
-      display: inline-block;
-      background: #fbbc04;
-      color: #0f1117;
-      font-size: 0.7rem;
-      padding: 0.1rem 0.6rem;
-      border-radius: 12px;
-      font-weight: 600;
-      margin-left: 0.3rem;
-    }
-
-    #btn-logout {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      z-index: 1000;
-      background: rgba(255,255,255,0.1);
-      border: 1px solid #2a2a45;
-      color: #e8e8f0;
-      padding: 0.3rem 0.8rem;
-      border-radius: 20px;
-      cursor: pointer;
-      font-family: 'Inter', sans-serif;
-      font-size: 0.8rem;
-    }
-    #btn-logout:hover { background: rgba(255,0,0,0.2); border-color: #f87171; }
-
-    .empty-state {
-      text-align: center;
-      padding: 2rem 1rem;
-      color: #6b7280;
-      font-size: 0.95rem;
-    }
+    .solicitud-card .btn-aceptar:hover { background: #2d9248; }
+    .empty-state { text-align: center; padding: 2rem; color: #6b7280; font-size: 0.95rem; }
     .empty-state .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
 
-    /* Leaflet ajustes */
+    #btn-logout {
+      position: fixed; top: 10px; right: 10px; z-index: 1000;
+      background: rgba(255,255,255,0.1); border: 1px solid #2a2a45;
+      color: #e8e8f0; padding: 0.3rem 0.8rem; border-radius: 20px; cursor: pointer;
+    }
     .leaflet-popup-content-wrapper { border-radius: 12px; background: #1a1a2e; color: white; }
     .leaflet-popup-tip { background: #1a1a2e; }
     .leaflet-control-zoom a { color: white !important; background: #2a2a45 !important; }
-
-    /* Scroll */
-    #solicitudes-container::-webkit-scrollbar { width: 4px; }
-    #solicitudes-container::-webkit-scrollbar-track { background: transparent; }
-    #solicitudes-container::-webkit-scrollbar-thumb { background: #3a3a5a; border-radius: 4px; }
   </style>
 </head>
 <body>
 
-<!-- ═══ Pantalla de Login ═══ -->
+<!-- Login -->
 <div id="login-screen">
   <h1>🚖 Conductores</h1>
   <input id="login-email" type="email" placeholder="Email" />
@@ -163,15 +70,13 @@
   </div>
 </div>
 
-<!-- ═══ App principal ═══ -->
+<!-- App principal -->
 <div id="app-main">
   <div id="map"></div>
   <div id="solicitudes-container">
-    <!-- Las solicitudes se renderizan aquí -->
-    <div class="empty-state" id="empty-state">
+    <div class="empty-state">
       <div class="icon">🚗</div>
-      No hay solicitudes pendientes<br/>
-      <span style="font-size:0.8rem;">Espera a que un cliente solicite un taxi</span>
+      No hay solicitudes pendientes
     </div>
   </div>
   <button id="btn-logout" onclick="logout()">✕ Salir</button>
@@ -193,33 +98,24 @@ let myMarker = null;
 let conductorPos = null;
 let watchId = null;
 let channel = null;
-let solicitudesCache = [];
+let solicitudMarkers = [];
 
-// ── Elementos DOM ──
-const loginScreen = document.getElementById('login-screen');
-const appMain = document.getElementById('app-main');
-const loginError = document.getElementById('login-error');
-const container = document.getElementById('solicitudes-container');
-const emptyState = document.getElementById('empty-state');
-
-// ═══════════════════════════════════════════════════════════════════
-// LOGIN
-// ═══════════════════════════════════════════════════════════════════
+// ── Login ──
 async function loginConductor() {
   const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
-  loginError.textContent = '';
+  const errorDiv = document.getElementById('login-error');
+  errorDiv.textContent = '';
 
   if (!email || !password) {
-    loginError.textContent = 'Completa todos los campos.';
+    errorDiv.textContent = 'Completa todos los campos.';
     return;
   }
 
   try {
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) throw new Error(error.message);
+    if (error) throw error;
 
-    // Verificar rol conductor
     const { data: perfil, error: perfilError } = await sb
       .from('perfiles')
       .select('rol')
@@ -233,27 +129,22 @@ async function loginConductor() {
 
     currentUser = data.user;
     iniciarApp();
-
   } catch (err) {
-    loginError.textContent = '❌ ' + err.message;
+    errorDiv.textContent = '❌ ' + err.message;
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// INICIAR APP
-// ═══════════════════════════════════════════════════════════════════
+// ── Iniciar app ──
 function iniciarApp() {
-  loginScreen.style.display = 'none';
-  appMain.style.display = 'flex';
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-main').style.display = 'flex';
   initMap();
   startGPS();
   cargarSolicitudes();
   suscribirSolicitudes();
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// MAPA
-// ═══════════════════════════════════════════════════════════════════
+// ── Mapa ──
 function initMap() {
   if (map) return;
   map = L.map('map').setView([40.4168, -3.7038], 13);
@@ -283,16 +174,14 @@ function startGPS() {
         myMarker.setLatLng(ll);
       }
       map.setView(ll, 14);
-      cargarSolicitudes(); // refrescar al mover
+      cargarSolicitudes();
     },
     err => console.warn('GPS error', err),
     { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// SOLICITUDES
-// ═══════════════════════════════════════════════════════════════════
+// ── Solicitudes ──
 function distanciaKm(lat1, lng1, lat2, lng2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -313,21 +202,21 @@ async function cargarSolicitudes() {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    solicitudesCache = data || [];
-    renderizarSolicitudes(solicitudesCache);
+    renderizarSolicitudes(data || []);
   } catch (err) {
     console.error('Error cargando solicitudes:', err);
-    container.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div>Error al cargar solicitudes<br/><span style="font-size:0.8rem;">${err.message}</span></div>`;
+    document.getElementById('solicitudes-container').innerHTML =
+      '<div class="empty-state"><div class="icon">⚠️</div>Error al cargar solicitudes</div>';
   }
 }
 
 function renderizarSolicitudes(lista) {
-  if (!lista || lista.length === 0) {
+  const container = document.getElementById('solicitudes-container');
+  if (!lista.length) {
     container.innerHTML = `
-      <div class="empty-state" id="empty-state">
+      <div class="empty-state">
         <div class="icon">🚗</div>
-        No hay solicitudes pendientes<br/>
-        <span style="font-size:0.8rem;">Espera a que un cliente solicite un taxi</span>
+        No hay solicitudes pendientes
       </div>
     `;
     return;
@@ -336,36 +225,24 @@ function renderizarSolicitudes(lista) {
   let html = '';
   lista.forEach(s => {
     const dist = distanciaKm(conductorPos.lat, conductorPos.lng, s.origen_lat, s.origen_lng);
-    const tiempo = Math.round((dist / 30) * 60); // 30 km/h aprox
-
+    const tiempo = Math.round((dist / 30) * 60);
     html += `
-      <div class="solicitud-card" data-id="${s.id}">
+      <div class="solicitud-card">
         <div class="info">
-          <span class="origen-destino">
-            <strong>${s.origen_nombre || 'Origen'}</strong> → ${s.destino_nombre || 'Destino'}
-          </span>
+          <span><strong>${s.origen_nombre || 'Origen'}</strong> → ${s.destino_nombre || 'Destino'}</span>
           <span class="precio">💰 ${s.precio.toFixed(2)} €</span>
           <span class="distancia">📏 ${s.distancia_km.toFixed(1)} km</span>
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.3rem;">
-          <span class="tiempo">🚗 ${dist.toFixed(1)} km de ti · ⏱ ~${tiempo} min</span>
-          <span class="badge">${s.tarifa_key.toUpperCase()}</span>
-        </div>
-        <div class="acciones">
-          <button onclick="aceptarSolicitud('${s.id}')">✅ Aceptar</button>
-        </div>
+        <div style="font-size:0.8rem;color:#9aa0a6;">🚗 ${dist.toFixed(1)} km de ti · ⏱ ~${tiempo} min</div>
+        <button class="btn-aceptar" onclick="aceptarSolicitud('${s.id}')">✅ Aceptar</button>
       </div>
     `;
   });
-
   container.innerHTML = html;
 
-  // Mostrar marcadores en el mapa
-  // Limpiar marcadores anteriores (opcional)
-  if (window.solicitudMarkers) {
-    window.solicitudMarkers.forEach(m => map.removeLayer(m));
-  }
-  window.solicitudMarkers = [];
+  // Marcadores en el mapa
+  solicitudMarkers.forEach(m => map.removeLayer(m));
+  solicitudMarkers = [];
   lista.forEach(s => {
     const marker = L.marker([s.origen_lat, s.origen_lng])
       .addTo(map)
@@ -374,7 +251,7 @@ function renderizarSolicitudes(lista) {
         Destino: ${s.destino_nombre || 'Destino'}<br/>
         Precio: ${s.precio.toFixed(2)} €
       `);
-    window.solicitudMarkers.push(marker);
+    solicitudMarkers.push(marker);
   });
 }
 
@@ -395,19 +272,15 @@ async function aceptarSolicitud(id) {
 
     if (error) throw error;
     toast('Solicitud aceptada 🎉');
-    cargarSolicitudes(); // refrescar
+    cargarSolicitudes();
   } catch (err) {
     alert('Error al aceptar: ' + err.message);
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// SUSCRIPCIÓN EN TIEMPO REAL
-// ═══════════════════════════════════════════════════════════════════
+// ── Suscripción en tiempo real ──
 function suscribirSolicitudes() {
-  if (channel) {
-    sb.removeChannel(channel);
-  }
+  if (channel) sb.removeChannel(channel);
   channel = sb.channel('solicitudes-pendientes');
   channel.on(
     'postgres_changes',
@@ -417,18 +290,11 @@ function suscribirSolicitudes() {
       table: 'solicitudes',
       filter: 'estado=eq.pendiente'
     },
-    (payload) => {
-      console.log('Nueva solicitud:', payload.new);
-      cargarSolicitudes(); // refrescar lista
-    }
-  ).subscribe((status) => {
-    console.log('Suscripción a solicitudes:', status);
-  });
+    () => cargarSolicitudes()
+  ).subscribe();
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// TOAST (notificaciones)
-// ═══════════════════════════════════════════════════════════════════
+// ── Toast ──
 function toast(msg) {
   const t = document.createElement('div');
   t.style.cssText = `
@@ -450,24 +316,20 @@ function toast(msg) {
   }, 2500);
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// LOGOUT
-// ═══════════════════════════════════════════════════════════════════
+// ── Logout ──
 function logout() {
   if (watchId) navigator.geolocation.clearWatch(watchId);
   if (channel) sb.removeChannel(channel);
   sb.auth.signOut();
   currentUser = null;
-  appMain.style.display = 'none';
-  loginScreen.style.display = 'flex';
+  document.getElementById('app-main').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-email').value = '';
   document.getElementById('login-password').value = '';
-  loginError.textContent = '';
+  document.getElementById('login-error').textContent = '';
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// AUTO-LOGIN (si hay sesión activa)
-// ═══════════════════════════════════════════════════════════════════
+// ── Auto-login si hay sesión ──
 sb.auth.getSession().then(({ data: { session } }) => {
   if (session?.user) {
     sb.from('perfiles').select('rol').eq('id', session.user.id).single()
